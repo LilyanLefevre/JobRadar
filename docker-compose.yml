@@ -1,0 +1,21 @@
+services:
+  jobradar:
+    image: ${JOBRADAR_IMAGE:-ghcr.io/lilyanlefevre/jobradar:latest}
+    build: .
+    restart: unless-stopped
+    env_file: .env # CLAUDE_CODE_OAUTH_TOKEN (claude setup-token), CLOUDFLARED_TOKEN
+    ports:
+      - "${JOBRADAR_BIND:-127.0.0.1}:5055:5055"
+    volumes:
+      - ./data:/data # cv.md
+
+  # Optionnel: tunnel Cloudflare (profil "tunnel"), route configurée dans le tableau de bord Cloudflare vers http://jobradar:5055
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN in .env}
+    depends_on:
+      - jobradar
