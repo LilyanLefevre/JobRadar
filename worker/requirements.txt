@@ -1,0 +1,6 @@
+python-jobspy
+flask
+gunicorn
+anthropic
+cryptography
+pydantic
