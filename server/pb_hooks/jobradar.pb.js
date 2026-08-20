@@ -1,6 +1,41 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Routes /jr/* : toutes exigent un utilisateur connecté ; le worker n'est joignable que d'ici.
 
+// En-têtes de sécurité, et dashboard/API d'administration injoignables par le tunnel public
+// (Cloudflare ajoute CF-Connecting-IP ; en direct, via le port local ou un tunnel SSH, tout reste accessible).
+routerUse((e) => {
+  const path = e.request.url.path
+  const viaTunnel = !!e.request.header.get("CF-Connecting-IP")
+  const admin = ["/_/", "/api/collections/_superusers", "/api/settings", "/api/backups", "/api/logs", "/api/crons", "/api/collections/_"]
+  if (viaTunnel && $os.getenv("ADMIN_PUBLIC") !== "1" && (path === "/_" || admin.some((p) => path.startsWith(p)))) {
+    return e.json(404, { message: "Not found" })
+  }
+  if (!path.startsWith("/_/") && !path.startsWith("/api/")) {
+    const h = e.response.header()
+    h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+    h.set("Referrer-Policy", "no-referrer")
+    h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    if (viaTunnel) h.set("Strict-Transport-Security", "max-age=31536000")
+  }
+  return e.next()
+})
+
+// Les comptes ne se créent que par OAuth : la création directe via l'API est interdite.
+onRecordCreateRequest((e) => {
+  if (e.hasSuperuserAuth()) return e.next()
+  throw new ForbiddenError("Inscription par OAuth uniquement.")
+}, "users")
+
+// Liste d'invités optionnelle (SIGNUP_ALLOWLIST=a@x.io,b@y.io) : vide = inscription ouverte.
+onRecordAuthWithOAuth2Request((e) => {
+  const allow = ($os.getenv("SIGNUP_ALLOWLIST") || "").toLowerCase().split(",").map((x) => x.trim()).filter(Boolean)
+  const mail = ((e.oAuth2User && e.oAuth2User.email) || "").toLowerCase()
+  if (e.isNewRecord && allow.length && !allow.includes(mail)) {
+    throw new ForbiddenError("Inscription sur invitation.")
+  }
+  e.next()
+}, "users")
+
 routerAdd("GET", "/jr/providers", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const r = lib.worker("/providers", null, 20, "GET")
