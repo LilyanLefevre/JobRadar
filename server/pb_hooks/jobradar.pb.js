@@ -6,9 +6,15 @@
 routerUse((e) => {
   const path = e.request.url.path
   const viaTunnel = !!e.request.header.get("CF-Connecting-IP")
-  const admin = ["/_/", "/api/collections/_superusers", "/api/settings", "/api/backups", "/api/logs", "/api/crons", "/api/collections/_"]
-  if (viaTunnel && $os.getenv("ADMIN_PUBLIC") !== "1" && (path === "/_" || admin.some((p) => path.startsWith(p)))) {
-    return e.json(404, { message: "Not found" })
+  if (viaTunnel && $os.getenv("ADMIN_PUBLIC") !== "1") {
+    // Liste blanche : par le tunnel, seule la collection des utilisateurs est joignable (par nom OU par identifiant,
+    // les superusers répondent aussi à leur identifiant pbc_…). Le reste de l'administration est bloqué.
+    const coll = path.startsWith("/api/collections") ? path.split("/")[3] || "" : null
+    const adminApi = ["/api/settings", "/api/backups", "/api/logs", "/api/crons"]
+    if (path === "/_" || path.startsWith("/_/") || adminApi.some((p) => path.startsWith(p)) ||
+        (coll !== null && coll !== "users" && coll !== "_pb_users_auth_")) {
+      return e.json(404, { message: "Not found" })
+    }
   }
   if (!path.startsWith("/_/") && !path.startsWith("/api/")) {
     const h = e.response.header()
