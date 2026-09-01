@@ -18,7 +18,7 @@ routerUse((e) => {
   }
   if (!path.startsWith("/_/") && !path.startsWith("/api/")) {
     const h = e.response.header()
-    h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+    h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
     h.set("Referrer-Policy", "no-referrer")
     h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     if (viaTunnel) h.set("Strict-Transport-Security", "max-age=31536000")
@@ -79,6 +79,21 @@ routerAdd("POST", "/jr/search", (e) => {
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))
 
+routerAdd("POST", "/jr/cv/import", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const rec = lib.secretOf($app, e.auth.id)
+  if (!rec) return e.json(400, { error: "Configurez d'abord votre IA (Paramètres) : elle sert à structurer le CV." })
+  const body = e.requestInfo().body
+  const r = lib.worker("/cv/extract", {
+    provider: rec.getString("provider"),
+    enc: rec.getString("api_key_enc"),
+    kind: body.kind,
+    data: body.data,
+    text: body.text,
+  }, 240)
+  return e.json(r.statusCode, r.json)
+}, $apis.requireAuth("users"))
+
 routerAdd("POST", "/jr/evaluate", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const rec = lib.secretOf($app, e.auth.id)
@@ -87,6 +102,7 @@ routerAdd("POST", "/jr/evaluate", (e) => {
     provider: rec.getString("provider"),
     enc: rec.getString("api_key_enc"),
     cv: e.auth.getString("cv"),
+    profile: JSON.parse(e.auth.getString("profile") || "null"),
     job: e.requestInfo().body,
   }, 240)
   return e.json(r.statusCode, r.json)

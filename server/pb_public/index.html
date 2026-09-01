@@ -4,95 +4,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JobRadar</title>
-<style>
-:root{--bg:#0e1116;--panel:#161b22;--line:#252c36;--text:#e6e9ee;--mute:#8b95a5;--acc:#6ee7b7;--bad:#f87171;--mid:#fbbf24}
-@media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6ea;--text:#14181f;--mute:#667085;--acc:#0f9d6e;--bad:#dc2626;--mid:#d97706}}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,sans-serif}
-#app{display:grid;grid-template-columns:320px 380px 1fr;height:100vh}
-aside,section,main{overflow:auto;padding:18px;border-right:1px solid var(--line)}
-main{border:0}
-h1{font-size:18px;margin:0 0 14px;letter-spacing:-.02em}
-h1 span{color:var(--acc)}
-h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:20px 0 8px}
-label{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
-input,textarea,select{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
-textarea{height:180px;resize:vertical;font-size:12px}
-input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
-.row{display:flex;gap:8px}.row>*{flex:1}
-.chk{display:flex;gap:12px;margin-top:8px}.chk label{display:flex;gap:4px;align-items:center;margin:0;color:var(--text)}.chk input{width:auto}
-button{background:var(--acc);color:#04130c;border:0;border-radius:8px;padding:9px 14px;font:600 14px system-ui;cursor:pointer;width:100%;margin-top:14px}
-button.ghost{background:transparent;color:var(--text);border:1px solid var(--line);margin-top:6px}
-button:disabled{opacity:.5;cursor:wait}
-.job{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;display:flex;gap:12px;align-items:center}
-.job:hover,.job.on{border-color:var(--acc)}
-.job b{display:block}.job small{color:var(--mute)}
-.score{min-width:46px;text-align:center;font:700 18px ui-monospace,monospace}
-.score i{display:block;font:400 10px system-ui;color:var(--mute)}
-.hi{color:var(--acc)}.md{color:var(--mid)}.lo{color:var(--bad)}
-.bars{display:flex;gap:24px;margin:12px 0}
-.bars div{font:700 34px ui-monospace,monospace}.bars small{display:block;font:400 11px system-ui;color:var(--mute)}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px}
-.diff{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0;font-size:13px}
-.diff p{margin:0;padding:8px;border-radius:6px}.old{background:#f871711a}.new{background:#6ee7b71a}
-ul{margin:4px 0;padding-left:18px}
-a{color:var(--acc)}
-.mute{color:var(--mute)}
-details{margin-top:14px}pre{white-space:pre-wrap;font:12px/1.5 inherit;color:var(--mute)}
-#login{max-width:380px;margin:12vh auto;padding:0 18px;text-align:center}
-#login button{margin-top:10px}
-.who{display:flex;justify-content:space-between;align-items:center;color:var(--mute);font-size:12px;margin-bottom:6px}
-.who a{cursor:pointer}
-@media(max-width:1000px){#app{display:block;height:auto}}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="login" hidden>
-  <h1>Job<span>Radar</span></h1>
-  <p class="mute">Cherchez des offres et faites évaluer votre CV par Claude pour chacune.</p>
+  <div class="brand">Job<span>Radar</span></div>
+  <p class="muted">Trouvez des offres et sachez, pour chacune, comment adapter votre CV.</p>
   <div id="providers"></div>
-  <p class="mute" id="loginMsg"></p>
+  <p class="muted small" id="loginMsg" role="status"></p>
 </div>
 
 <div id="app" hidden>
-<aside>
-  <h1>Job<span>Radar</span></h1>
-  <div class="who"><span id="who"></span><a id="logout">Déconnexion</a></div>
-
-  <h2>IA pour les évaluations</h2>
-  <p class="mute" id="keyState"></p>
-  <select id="provider"></select>
-  <p class="mute" id="provNote" style="font-size:12px"></p>
-  <input id="key" type="password" placeholder="Clé API" autocomplete="off">
-  <div class="row"><button class="ghost" id="saveKey">Enregistrer</button><button class="ghost" id="delKey">Supprimer</button></div>
-  <p class="mute" style="font-size:12px">Votre clé est vérifiée puis stockée chiffrée. Elle sert uniquement à vos évaluations, avec votre quota ou sur votre compte.</p>
-
-  <h2>Mon CV (texte / markdown)</h2>
-  <textarea id="cv" placeholder="Collez votre CV ici"></textarea>
-  <button class="ghost" id="saveCv">Enregistrer le CV</button>
-  <button class="ghost" id="delAccount">Supprimer mon compte et mes données</button>
-
-  <h2>Recherche</h2>
-  <label>Poste</label><input id="q" placeholder="développeur web">
-  <label>Lieu</label><input id="loc" placeholder="Lyon, France">
-  <div class="row">
-    <div><label>Résultats / site</label><input id="n" type="number" value="10" min="1" max="20"></div>
-    <div><label>Âge max</label><select id="hours"><option value="24">24 h</option><option value="72">3 j</option><option value="168" selected>7 j</option><option value="720">30 j</option></select></div>
-  </div>
-  <div class="chk">
-    <label><input type="checkbox" class="site" value="indeed" checked>Indeed</label>
-    <label><input type="checkbox" class="site" value="linkedin" checked>LinkedIn</label>
-    <label><input type="checkbox" class="site" value="glassdoor">Glassdoor</label>
-  </div>
-  <button id="go">Chercher et évaluer</button>
-  <p class="mute" id="status"></p>
-</aside>
-<section id="list"><p class="mute">Lancez une recherche.</p></section>
-<main id="detail"><p class="mute">Sélectionnez une offre.</p></main>
+  <header class="top"><div class="in">
+    <a class="brand" href="#/search" aria-label="JobRadar, accueil">Job<span>Radar</span></a>
+    <nav aria-label="Navigation principale">
+      <a href="#/search" data-nav="search">Recherche</a>
+      <a href="#/profile" data-nav="profile">Mon profil</a>
+      <a href="#/settings" data-nav="settings">Paramètres</a>
+    </nav>
+    <div class="chips" id="chips"></div>
+  </div></header>
+  <main id="view"></main>
 </div>
 
+<dialog id="dialog"></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
 <script src="pocketbase.umd.js"></script>
-<script src="app.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
