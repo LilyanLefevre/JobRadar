@@ -147,7 +147,7 @@ La connexion par mot de passe est désactivée : les comptes ne se créent que p
 1. Créez un tunnel dans le tableau de bord Cloudflare (Zero Trust > Networks > Tunnels) et ajoutez un *Public Hostname* vers le service `http://app:8090`.
 2. Dans `.env` : `COMPOSE_PROFILES=tunnel` et `CLOUDFLARED_TOKEN=<jeton>`, puis `docker compose up -d`.
 
-Le dashboard (`/_/`) et les API d'administration sont **bloqués** quand la requête arrive par le tunnel. Pour administrer, passez par le port local ou un tunnel SSH :
+Quand la requête arrive par le tunnel, seule la collection des utilisateurs est joignable : les API d'administration (connexion superuser, réglages, sauvegardes, logs…) sont **bloquées**, par nom comme par identifiant. L'interface statique de `/_/` reste servie (PocketBase y affiche la page de succès de la connexion OAuth) mais ne peut pas se connecter. Pour administrer, passez par le port local ou un tunnel SSH :
 ```bash
 ssh -L 8090:127.0.0.1:8090 <hôte>   # puis http://localhost:8090/_/
 ```
@@ -187,16 +187,16 @@ WORKER_URL=http://127.0.0.1:5055 WORKER_SECRET=dev \
   --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public
 ```
 
-Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI.
+Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local.
 
 ## Sécurité et données
 
 Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY.md).
 
-- Connexion OAuth2 uniquement ; création de compte directe par l'API refusée ; inscription limitable par liste d'invités.
+- Connexion OAuth2 uniquement ; création de compte directe par l'API refusée (règle `@request.context = 'oauth2'`) ; inscription limitable par liste d'invités.
 - Les clés API sont vérifiées puis **chiffrées** (Fernet) dans une collection sans aucune règle d'API : elles ne sont jamais renvoyées au navigateur.
 - Le worker n'est pas exposé ; il vérifie un secret partagé à chaque appel.
-- Limitation de débit, en-têtes de sécurité (CSP stricte, HSTS), dashboard d'administration inaccessible par le tunnel public.
+- Limitation de débit, en-têtes de sécurité (CSP stricte, HSTS), API d'administration inaccessibles par le tunnel public (liste blanche de collections).
 - Conteneurs durcis : worker non-root, système de fichiers en lecture seule, sans capacités.
 - Chaque utilisateur peut **supprimer son compte** depuis l'interface (CV et clé API supprimés en cascade).
 
@@ -215,7 +215,7 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ├── .env.example              # modèle de configuration
 ├── server/                   # PocketBase
 │   ├── Dockerfile            # binaire vérifié par SHA-256, amd64 + arm64
-│   ├── pb_migrations/        # schéma : CV, secrets, fournisseur, limites de débit
+│   ├── pb_migrations/        # schéma : CV, secrets, fournisseur, limites de débit, règle d'inscription
 │   ├── pb_hooks/             # routes /jr/*, sécurité (en-têtes, admin, inscriptions)
 │   └── pb_public/            # interface (index.html, app.js, SDK PocketBase)
 ├── worker/                   # service Python interne
