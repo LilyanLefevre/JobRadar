@@ -11,7 +11,7 @@ export const state = {
   key: { has_key: false, provider: '' },
   jobs: {},
   selected: null,
-  form: { q: '', loc: '', n: '10', hours: '168', sites: ['indeed', 'linkedin'] },
+  form: { q: '', loc: '', n: '10', hours: '168', sites: ['indeed', 'hellowork', 'linkedin'] },
 }
 
 export const profile = () => pb.authStore.record?.profile || null

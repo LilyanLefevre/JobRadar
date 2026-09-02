@@ -1,4 +1,4 @@
-import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, bus, hasProfile, profile } from './lib.js'
+import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, bus, hasProfile, profile } from './lib.js?v=__V__'
 
 const CATEGORIES = ['Emploi', 'Stage', 'Alternance', 'Freelance', 'Projet', 'Bénévolat']
 const CONTRATS = ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim']

@@ -11,6 +11,9 @@ RUN apk add --no-cache ca-certificates unzip \
 COPY pb_migrations /pb/pb_migrations
 COPY pb_hooks /pb/pb_hooks
 COPY pb_public /pb/pb_public
+# Numéro de version dans les URL des fichiers de l'interface : un navigateur ou un cache de bord ne sert jamais l'ancienne version.
+ARG BUILD_ID=dev
+RUN find /pb/pb_public -type f \( -name '*.js' -o -name '*.html' \) ! -name 'pocketbase.umd.js' -exec sed -i "s/__V__/${BUILD_ID}/g" {} +
 EXPOSE 8090
 VOLUME /pb/pb_data
 CMD ["/pb/pocketbase", "serve", "--http=0.0.0.0:8090", "--dir=/pb/pb_data", "--migrationsDir=/pb/pb_migrations", "--hooksDir=/pb/pb_hooks", "--publicDir=/pb/pb_public"]
