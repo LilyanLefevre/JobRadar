@@ -18,7 +18,7 @@ routerUse((e) => {
   }
   if (!path.startsWith("/_/") && !path.startsWith("/api/")) {
     const h = e.response.header()
-    h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+    h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
     h.set("Cache-Control", "no-cache") // revalider à chaque fois : un cache de bord ne doit jamais figer une ancienne version
     h.set("Referrer-Policy", "no-referrer")
     h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
@@ -91,6 +91,20 @@ routerAdd("POST", "/jr/cv/import", (e) => {
     kind: body.kind,
     data: body.data,
     text: body.text,
+  }, 240)
+  return e.json(r.statusCode, r.json)
+}, $apis.requireAuth("users"))
+
+routerAdd("POST", "/jr/evaluate/batch", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const rec = lib.secretOf($app, e.auth.id)
+  if (!rec) return e.json(400, { error: "Choisissez un fournisseur et ajoutez votre clé API." })
+  const r = lib.worker("/evaluate_batch", {
+    provider: rec.getString("provider"),
+    enc: rec.getString("api_key_enc"),
+    cv: e.auth.getString("cv"),
+    profile: JSON.parse(e.auth.getString("profile") || "null"),
+    jobs: e.requestInfo().body.jobs,
   }, 240)
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))

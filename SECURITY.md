@@ -14,7 +14,7 @@ Application web ouverte à des utilisateurs authentifiés par OAuth, qui manipul
 | Appel direct du worker | Non exposé ; secret partagé (`WORKER_SECRET`) comparé à temps constant. |
 | Création de comptes en masse / contournement d'OAuth | Règle de création `@request.context = 'oauth2'` (création directe refusée) ; liste d'invités optionnelle ; limitation de débit. Flux OAuth complet testé en navigateur avec un faux fournisseur OIDC. |
 | Brute force de l'administration | Via le tunnel public, liste blanche de collections : la connexion superuser (par nom ou identifiant `pbc_…`), les réglages, sauvegardes et logs sont bloqués ; limitation de débit sur l'authentification. L'interface statique de `/_/` est servie (page de succès OAuth) mais inutilisable sans ces API. |
-| XSS | Tout contenu issu des offres ou de l'IA est échappé ; liens limités à http(s) ; CSP sans script ni style en ligne. |
+| XSS | Tout contenu issu des offres ou de l'IA est échappé ; liens limités à http(s) ; CSP sans script ni style en ligne, polices servies par l'application (`font-src 'self'`). |
 | SSRF | Les URL des fournisseurs viennent d'un fichier fixe, jamais de l'utilisateur. |
 | Entrées invalides ou volumineuses | Champs bornés, taille de requête limitée, erreurs génériques sans détail interne. |
 | Injection de prompt (via une offre ou un CV) | Le contenu est présenté comme donnée à analyser, la sortie est contrainte à un schéma et affichée échappée. Impact limité à l'évaluation de l'utilisateur lui-même. |

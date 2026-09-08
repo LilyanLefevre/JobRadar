@@ -1,4 +1,5 @@
 import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, bus, hasProfile, profile } from './lib.js?v=__V__'
+import { ic } from './icons.js?v=__V__'
 
 const CATEGORIES = ['Emploi', 'Stage', 'Alternance', 'Freelance', 'Projet', 'Bénévolat']
 const CONTRATS = ['CDI', 'CDD', 'Stage', 'Alternance', 'Freelance', 'Intérim']
@@ -39,20 +40,15 @@ function renderImport(root) {
   const ia = state.key.has_key
   root.innerHTML = `
     <div class="page-head"><h1>Mon profil</h1>
-      <p class="muted">Importez votre CV : il est analysé puis structuré. Vous vérifiez et corrigez ensuite chaque information.</p></div>
-    ${ia ? '' : `<div class="banner warn" role="status"><div><b>IA non configurée</b>L'import automatique demande une IA pour structurer le CV. <a href="#/settings">Configurer maintenant</a>. Vous pouvez aussi remplir le profil à la main.</div></div><br>`}
-    ${reimport ? `<div class="banner info"><div><b>Réimport</b>Le nouveau CV remplacera les informations actuelles une fois validé. <a href="#/profile" id="cancelImport">Annuler</a></div></div><br>` : ''}
+      <p>Importez votre CV : il est analysé puis structuré. Vous vérifiez et corrigez ensuite chaque information.</p></div>
+    ${ia ? '' : `<div class="banner warn" role="status">${ic('alert')}<div><b>IA non configurée</b>L'import automatique demande une IA pour structurer le CV. <a href="#/settings">Configurer maintenant</a>, ou remplissez le profil à la main.</div></div><div class="mt"></div>`}
+    ${reimport ? `<div class="banner">${ic('file')}<div><b>Réimport</b>Le nouveau CV remplacera les informations actuelles une fois validé. <a href="#/profile" id="cancelImport">Annuler</a></div></div><div class="mt"></div>` : ''}
     <div class="import">
-      <section class="card"><h2>Importer un PDF</h2>
-        <p class="muted small">Le texte du PDF est extrait puis structuré par votre IA. Le fichier n'est pas conservé.</p>
-        <label class="drop" id="drop"><input class="sr-only" type="file" id="pdf" accept="application/pdf" ${ia ? '' : 'disabled'}>
-          <span>Déposez votre CV ici<br>ou cliquez pour choisir (PDF, 5 Mo max)</span></label></section>
-      <section class="card"><h2>Coller le texte</h2>
-        <p class="muted small">Pour un CV scanné ou un autre format : copiez-collez son contenu.</p>
-        <button class="btn secondary" id="paste" ${ia ? '' : 'disabled'}>Coller le texte du CV</button></section>
-      <section class="card"><h2>Remplir à la main</h2>
-        <p class="muted small">Partez d'un profil vide et renseignez vos expériences, formations et compétences.</p>
-        <button class="btn secondary" id="manual">Créer mon profil</button></section>
+      <label class="drop ${ia ? '' : 'off'}" id="drop"><input class="sr-only" type="file" id="pdf" accept="application/pdf" ${ia ? '' : 'disabled'}>
+        ${ic('upload')}<strong>Importer votre CV en PDF</strong>
+        <span>Déposez le fichier ici ou cliquez pour le choisir. 5 Mo maximum ; le PDF n'est pas conservé.</span></label>
+      <div class="alt"><button class="linkbtn" id="paste" ${ia ? '' : 'disabled'}>${ic('paste')}Coller le texte du CV</button>
+        <button class="linkbtn" id="manual">${ic('pencil')}Remplir à la main</button></div>
     </div>`
   $('#cancelImport')?.addEventListener('click', (e) => { e.preventDefault(); reimport = false; render(root) })
   const drop = $('#drop')
@@ -97,42 +93,48 @@ const input = (label, path, v, opt = {}) => `<label class="field ${opt.cls || ''
   ? `<textarea data-path="${path}" rows="${opt.rows || 4}" ${opt.ph ? `placeholder="${esc(opt.ph)}"` : ''}>${esc(v)}</textarea>`
   : `<input data-path="${path}" value="${esc(v)}" ${opt.ph ? `placeholder="${esc(opt.ph)}"` : ''} ${opt.list ? `data-list="1"` : ''}>`}</label>`
 const select = (label, path, v, options) => `<label class="field"><span>${label}</span><select data-path="${path}">${options.map((o) => { const [val, text] = Array.isArray(o) ? o : [o, o || '—']; return `<option value="${esc(val)}" ${val === v ? 'selected' : ''}>${esc(text)}</option>` }).join('')}</select></label>`
-const tools = (k, i, n) => `<div class="tools"><button class="btn ghost icon" data-act="mv:${k}:${i}:-1" aria-label="Monter" ${i === 0 ? 'disabled' : ''}>↑</button><button class="btn ghost icon" data-act="mv:${k}:${i}:1" aria-label="Descendre" ${i === n - 1 ? 'disabled' : ''}>↓</button><button class="btn ghost icon" data-act="rm:${k}:${i}" aria-label="Supprimer">✕</button></div>`
-const sectionHead = (title, hint, k) => `<header><div><h2>${title}</h2><p class="muted small">${hint}</p></div><button class="btn secondary sm" data-act="add:${k}">+ Ajouter</button></header>`
+const tools = (k, i, n) => `<div class="tools"><button class="btn ghost icon" data-act="mv:${k}:${i}:-1" aria-label="Monter" ${i === 0 ? 'disabled' : ''}>${ic('up')}</button><button class="btn ghost icon" data-act="mv:${k}:${i}:1" aria-label="Descendre" ${i === n - 1 ? 'disabled' : ''}>${ic('down')}</button><button class="btn ghost icon" data-act="rm:${k}:${i}" aria-label="Supprimer">${ic('close')}</button></div>`
+const sectionHead = (id, title, hint, k) => `<header><div><h2>${title}</h2>${hint ? `<p>${hint}</p>` : ''}</div>${k ? `<button class="btn secondary sm" data-act="add:${k}">${ic('plus')}Ajouter</button>` : ''}</header>`
+const SECTIONS = [['p-identite', 'Identité'], ['p-experiences', 'Expériences'], ['p-formations', 'Formations'], ['p-competences', 'Compétences'], ['p-langues', 'Langues'], ['p-recherche', 'Recherche']]
 
 function renderEditor(root) {
   const p = draft, r = p.recherche
   root.innerHTML = `
-    <div class="page-head"><h1>Mon profil</h1><p class="muted">Ces informations servent à évaluer les offres et à proposer des modifications de votre CV.</p></div>
-    ${p.verifie && !dirty ? '' : `<div class="banner info" role="status"><div><b>${p.verifie ? 'Modifications non enregistrées' : 'À vérifier'}</b>${p.verifie ? 'Enregistrez pour les prendre en compte.' : 'Les informations ont été extraites automatiquement et peuvent contenir des erreurs. Contrôlez-les, corrigez les catégories (type d\'expérience, compétences…), puis validez.'}</div></div>`}
-    <section class="section card stack"><h2>Identité</h2>
-      <div class="grid3">${input('Nom', 'identite.nom', p.identite.nom)}${input('Titre / poste actuel', 'identite.titre', p.identite.titre, { ph: 'Développeur web' })}${input('Localisation', 'identite.lieu', p.identite.lieu, { ph: 'Lyon' })}</div>
-      ${input('Résumé', 'resume', p.resume, { area: true, rows: 4 })}</section>
+    <div class="page-head"><h1>Mon profil</h1><p>Ces informations servent à évaluer les offres et à proposer des modifications de votre CV.</p></div>
+    ${p.verifie && !dirty ? '' : `<div class="banner" role="status">${ic('alert')}<div><b>${p.verifie ? 'Modifications non enregistrées' : 'À vérifier'}</b>${p.verifie ? 'Enregistrez pour les prendre en compte.' : "Les informations ont été extraites automatiquement et peuvent contenir des erreurs. Contrôlez-les, corrigez les catégories (type d'expérience, compétences…), puis validez."}</div></div><div class="mt"></div>`}
+    <div class="profile">
+      <nav class="toc" aria-label="Sections du profil">${SECTIONS.map(([id, t]) => `<a href="#/profile" data-scroll="${id}">${t}</a>`).join('')}</nav>
+      <div>
+        <section class="psec" id="p-identite" aria-labelledby="h-identite">${sectionHead('p-identite', '<span id="h-identite">Identité</span>', '', '')}
+          <div class="grid3">${input('Nom', 'identite.nom', p.identite.nom)}${input('Titre / poste actuel', 'identite.titre', p.identite.titre, { ph: 'Développeur web' })}${input('Localisation', 'identite.lieu', p.identite.lieu, { ph: 'Lyon' })}</div>
+          <div class="mt">${input('Résumé', 'resume', p.resume, { area: true, rows: 4 })}</div></section>
 
-    <section class="section">${sectionHead('Expériences', 'Classez chaque élément : emploi, stage, alternance, freelance, projet ou bénévolat.', 'experiences')}
-      ${p.experiences.length ? '' : '<div class="card empty"><p>Aucune expérience. Ajoutez-en une.</p></div>'}
-      ${p.experiences.map((x, i) => `<article class="card item" aria-label="Expérience ${i + 1}">
-        <header><div class="grow"><b>${esc(x.poste || 'Nouvelle expérience')}</b><span class="muted small"> ${esc(x.entreprise)}</span></div>${tools('experiences', i, p.experiences.length)}</header>
-        <div class="grid3">${select('Catégorie', `experiences.${i}.categorie`, x.categorie, CATEGORIES)}${input('Poste / intitulé', `experiences.${i}.poste`, x.poste)}${input('Entreprise / structure', `experiences.${i}.entreprise`, x.entreprise)}</div>
-        <div class="grid3 mt">${input('Lieu', `experiences.${i}.lieu`, x.lieu)}${input('Début', `experiences.${i}.debut`, x.debut, { ph: 'MM/AAAA' })}${input('Fin (vide = en cours)', `experiences.${i}.fin`, x.fin, { ph: 'MM/AAAA' })}</div>
-        <div class="mt">${input('Missions et réalisations (une par ligne)', `experiences.${i}.description`, x.description, { area: true, rows: 5 })}</div></article>`).join('')}</section>
+        <section class="psec" id="p-experiences">${sectionHead('p-experiences', 'Expériences', 'Classez chaque élément : emploi, stage, alternance, freelance, projet ou bénévolat.', 'experiences')}
+          ${p.experiences.length ? '' : `<div class="empty"><p>Aucune expérience. Ajoutez-en une.</p></div>`}
+          ${p.experiences.map((x, i) => `<article class="entry" aria-label="Expérience ${i + 1}">
+            <header><div class="grow"><b>${esc(x.poste || 'Nouvelle expérience')}</b><span class="muted"> ${esc(x.entreprise)}</span></div>${tools('experiences', i, p.experiences.length)}</header>
+            <div class="grid3">${select('Catégorie', `experiences.${i}.categorie`, x.categorie, CATEGORIES)}${input('Poste / intitulé', `experiences.${i}.poste`, x.poste)}${input('Entreprise / structure', `experiences.${i}.entreprise`, x.entreprise)}</div>
+            <div class="grid3 mt">${input('Lieu', `experiences.${i}.lieu`, x.lieu)}${input('Début', `experiences.${i}.debut`, x.debut, { ph: 'MM/AAAA' })}${input('Fin (vide = en cours)', `experiences.${i}.fin`, x.fin, { ph: 'MM/AAAA' })}</div>
+            <div class="mt">${input('Missions et réalisations (une par ligne)', `experiences.${i}.description`, x.description, { area: true, rows: 5 })}</div></article>`).join('')}</section>
 
-    <section class="section">${sectionHead('Formations', 'Diplômes et certifications.', 'formations')}
-      ${p.formations.map((x, i) => `<article class="card item tight" aria-label="Formation ${i + 1}"><div class="row"><div class="grow grid3">${input('Diplôme / certification', `formations.${i}.diplome`, x.diplome)}${input('Établissement', `formations.${i}.etablissement`, x.etablissement)}${input('Année', `formations.${i}.annee`, x.annee)}</div>${tools('formations', i, p.formations.length)}</div></article>`).join('')}</section>
+        <section class="psec" id="p-formations">${sectionHead('p-formations', 'Formations', 'Diplômes et certifications.', 'formations')}
+          ${p.formations.map((x, i) => `<article class="entry" aria-label="Formation ${i + 1}"><div class="row"><div class="grow grid3">${input('Diplôme / certification', `formations.${i}.diplome`, x.diplome)}${input('Établissement', `formations.${i}.etablissement`, x.etablissement)}${input('Année', `formations.${i}.annee`, x.annee)}</div>${tools('formations', i, p.formations.length)}</div></article>`).join('')}</section>
 
-    <section class="section">${sectionHead('Compétences', 'Regroupées par catégorie. Séparez les éléments par des virgules.', 'competences')}
-      ${p.competences.map((x, i) => `<article class="card item tight" aria-label="Catégorie de compétences ${i + 1}"><div class="row"><div class="grow grid2">${input('Catégorie', `competences.${i}.categorie`, x.categorie, { ph: 'Langages' })}${input('Compétences', `competences.${i}.items`, (x.items || []).join(', '), { list: true, ph: 'JavaScript, Python' })}</div>${tools('competences', i, p.competences.length)}</div></article>`).join('')}</section>
+        <section class="psec" id="p-competences">${sectionHead('p-competences', 'Compétences', 'Regroupées par catégorie. Séparez les éléments par des virgules.', 'competences')}
+          ${p.competences.map((x, i) => `<article class="entry" aria-label="Catégorie de compétences ${i + 1}"><div class="row"><div class="grow grid2">${input('Catégorie', `competences.${i}.categorie`, x.categorie, { ph: 'Langages' })}${input('Compétences', `competences.${i}.items`, (x.items || []).join(', '), { list: true, ph: 'JavaScript, Python' })}</div>${tools('competences', i, p.competences.length)}</div></article>`).join('')}</section>
 
-    <section class="section">${sectionHead('Langues', '', 'langues')}
-      ${p.langues.map((x, i) => `<article class="card item tight" aria-label="Langue ${i + 1}"><div class="row"><div class="grow grid2">${input('Langue', `langues.${i}.langue`, x.langue)}${select('Niveau', `langues.${i}.niveau`, x.niveau, LANGUE_NIVEAUX)}</div>${tools('langues', i, p.langues.length)}</div></article>`).join('')}</section>
+        <section class="psec" id="p-langues">${sectionHead('p-langues', 'Langues', '', 'langues')}
+          ${p.langues.map((x, i) => `<article class="entry" aria-label="Langue ${i + 1}"><div class="row"><div class="grow grid2">${input('Langue', `langues.${i}.langue`, x.langue)}${select('Niveau', `langues.${i}.niveau`, x.niveau, LANGUE_NIVEAUX)}</div>${tools('langues', i, p.langues.length)}</div></article>`).join('')}</section>
 
-    <section class="section card stack"><div><h2>Recherche d'emploi</h2><p class="muted small">Préremplit la recherche et aide l'IA à juger l'adéquation.</p></div>
-      <div class="grid2">${input('Postes visés (séparés par des virgules)', 'recherche.metiers', r.metiers.join(', '), { list: true })}${input('Lieux souhaités', 'recherche.lieux', r.lieux.join(', '), { list: true })}</div>
-      <div><span class="label">Types de contrat</span><div class="checks mt">${CONTRATS.map((c) => `<label class="check"><input type="checkbox" data-check="recherche.contrats" value="${c}" ${r.contrats.includes(c) ? 'checked' : ''}>${c}</label>`).join('')}</div></div>
-      <div class="grid2">${select('Télétravail', 'recherche.teletravail', r.teletravail, TELETRAVAIL)}${select('Niveau', 'recherche.niveau', r.niveau, NIVEAUX)}</div></section>
+        <section class="psec" id="p-recherche">${sectionHead('p-recherche', "Recherche d'emploi", "Préremplit la recherche et aide l'IA à juger l'adéquation.", '')}
+          <div class="grid2">${input('Postes visés (séparés par des virgules)', 'recherche.metiers', r.metiers.join(', '), { list: true })}${input('Lieux souhaités', 'recherche.lieux', r.lieux.join(', '), { list: true })}</div>
+          <div class="mt"><span class="label">Types de contrat</span><div class="checks mt">${CONTRATS.map((c) => `<label class="check"><input type="checkbox" data-check="recherche.contrats" value="${c}" ${r.contrats.includes(c) ? 'checked' : ''}>${c}</label>`).join('')}</div></div>
+          <div class="grid2 mt">${select('Télétravail', 'recherche.teletravail', r.teletravail, TELETRAVAIL)}${select('Niveau', 'recherche.niveau', r.niveau, NIVEAUX)}</div></section>
 
-    <div class="savebar"><button class="btn" id="save">${p.verifie ? 'Enregistrer' : 'Valider mon profil'}</button>
-      <button class="btn secondary" id="reimport">Réimporter un CV</button><span class="dirty" id="dirty" ${dirty ? '' : 'hidden'} role="status">Modifications non enregistrées</span></div>`
+        <div class="savebar"><button class="btn" id="save">${ic('check')}${p.verifie ? 'Enregistrer' : 'Valider mon profil'}</button>
+          <button class="btn secondary" id="reimport">${ic('upload')}Réimporter un CV</button><span class="dirty" id="dirty" ${dirty ? '' : 'hidden'} role="status">${ic('alert')}Modifications non enregistrées</span></div>
+      </div>
+    </div>`
 
   const markDirty = () => { dirty = true; $('#dirty').hidden = false }
   root.oninput = root.onchange = (e) => {
@@ -141,6 +143,8 @@ function renderEditor(root) {
     else if (t.dataset.check) { const arr = t.dataset.check.split('.').reduce((o, k) => o[k], draft); const i = arr.indexOf(t.value); t.checked ? i < 0 && arr.push(t.value) : i >= 0 && arr.splice(i, 1); markDirty() }
   }
   root.onclick = (e) => {
+    const sc = e.target.closest('[data-scroll]')
+    if (sc) { e.preventDefault(); document.getElementById(sc.dataset.scroll)?.scrollIntoView({ behavior: 'smooth' }); return }
     const b = e.target.closest('[data-act]'); if (!b) return
     const [act, k, i, d] = b.dataset.act.split(':'); const a = draft[k]
     if (act === 'add') a.push(factories[k]())
@@ -149,11 +153,11 @@ function renderEditor(root) {
     dirty = true; const y = scrollY; renderEditor(root); scrollTo(0, y)
   }
   $('#save').onclick = async (e) => {
-    e.target.disabled = true
+    e.currentTarget.disabled = true
     try {
       await pb.collection('users').update(pb.authStore.record.id, { profile: { ...draft, verifie: true } })
       draft.verifie = true; dirty = false; toast('Profil enregistré.'); bus.dispatchEvent(new Event('chrome')); renderEditor(root)
-    } catch (err) { toast('Enregistrement impossible : ' + err.message, 'err'); e.target.disabled = false }
+    } catch (err) { toast('Enregistrement impossible : ' + err.message, 'err'); $('#save').disabled = false }
   }
   $('#reimport').onclick = () => { if (dirty && !confirm('Des modifications ne sont pas enregistrées. Continuer ?')) return; reimport = true; dirty = false; render(root) }
 }

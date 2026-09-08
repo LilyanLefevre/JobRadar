@@ -14,15 +14,19 @@ Application web multi-utilisateurs : connexion Google / GitHub, et **chaque util
 
 ## Fonctionnement
 
-L'interface a trois pages : **Recherche**, **Mon profil** et **Paramètres**.
+L'interface a trois pages : **Recherche**, **Mon profil** et **Paramètres** (accessible, comme le compte, depuis le menu de l'avatar). Une pastille « Terminer la configuration » reste dans la barre tant que l'IA ou le CV manque.
 
 1. **Connexion** avec GitHub ou Google.
 2. **Paramètres** : l'utilisateur choisit un fournisseur d'IA et colle sa clé API (vérifiée, puis stockée chiffrée).
 3. **Mon profil** : il importe son CV en **PDF** (ou colle son texte, ou remplit à la main). Le texte est extrait puis structuré par son IA. Il **vérifie et corrige** ensuite chaque information : identité, expériences (avec leur *catégorie* : emploi, stage, alternance, freelance, projet, bénévolat), formations, compétences classées par catégorie, langues et critères de recherche (postes visés, contrats, lieux, télétravail, niveau). Le PDF n'est pas conservé ; l'utilisateur n'écrit jamais de fichier markdown.
-4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match.
+4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match. Les scores sont calculés **par lot de 8 offres en une seule requête d'IA** (le profil n'est envoyé qu'une fois) ; les modifications de CV, plus coûteuses, se demandent offre par offre.
 5. Pour chaque offre, la **description complète** s'affiche directement (rendue en mise en forme, pas en markdown brut), avec : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
 
 **Sans configuration, la recherche fonctionne quand même** : si l'IA ou le profil manque, une fenêtre propose de configurer (ou de chercher sans scores). Les offres s'affichent alors sans évaluation, et chacune peut être évaluée plus tard.
+
+## Design
+
+Direction « signalisation routière » : le match d'une offre se lit comme une distance sur un panneau de direction (plein = proche, contour = moyen, pointillé = loin), la source est une pastille ronde, le jaune est réservé à la sélection et au focus. Lettrage Barlow (hébergé avec l'application, licence SIL OFL), clair et sombre selon le système, accessibilité AA. Le système est décrit dans [DESIGN.md](DESIGN.md) ; le contexte produit dans [PRODUCT.md](PRODUCT.md).
 
 ## Architecture
 
@@ -198,7 +202,7 @@ WORKER_URL=http://127.0.0.1:5055 WORKER_SECRET=dev \
   --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public
 ```
 
-Tests : `node --test tests/md.test.mjs` vérifie que le rendu des descriptions n'injecte jamais de HTML actif.
+Tests : `node --test tests/md.test.mjs` vérifie le rendu des descriptions (titres, listes, jamais de HTML actif).
 
 Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local.
 
@@ -232,8 +236,9 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 │   ├── Dockerfile            # binaire vérifié par SHA-256, amd64 + arm64
 │   ├── pb_migrations/        # schéma : profil, secrets, fournisseur, limites de débit, règle d'inscription
 │   ├── pb_hooks/             # routes /jr/*, sécurité (en-têtes, admin, inscriptions)
-│   └── pb_public/            # interface : index.html, style.css, app.js (routeur), search/profile/settings/md.js, SDK PocketBase
+│   └── pb_public/            # interface : index.html, style.css, app.js (routeur, menu de compte), search/profile/settings/md/icons.js, fonts/, SDK PocketBase
 ├── tests/                    # tests du rendu markdown des descriptions
+├── PRODUCT.md · DESIGN.md    # contexte produit et système de design
 ├── worker/                   # service Python interne
 │   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation
 │   └── providers.json        # fournisseurs d'IA et modèles
