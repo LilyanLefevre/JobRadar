@@ -295,7 +295,7 @@ def _ask_openai(prov, key, prompt, model):
 
 def _ask_anthropic(prov, key, prompt, model):
     r = anthropic.Anthropic(api_key=key).messages.parse(
-        model=os.environ.get("JOBRADAR_MODEL") or prov["model"], max_tokens=8000,
+        model=_model_of(prov), max_tokens=8000,
         messages=[{"role": "user", "content": prompt}], output_format=model)
     return r.parsed_output
 
@@ -350,30 +350,70 @@ def cv_extract():
     return err if err else jsonify(profile=res.model_dump())
 
 
-BATCH_MAX = int(os.environ.get("EVAL_BATCH", "8"))
+def _batch_limit(prov):
+    """Taille de lot : réglée par fournisseur (providers.json), surchargeable par EVAL_BATCH, jamais au-delà de 40."""
+    return max(1, min(int(os.environ.get("EVAL_BATCH") or prov.get("batch", 8)), 40))
 
 
-@app.post("/evaluate_batch")
-def evaluate_batch():
-    """Une seule requête d'IA pour un lot d'offres : le profil n'est envoyé qu'une fois."""
-    d = _body()
-    jobs = [j for j in (d.get("jobs") if isinstance(d.get("jobs"), list) else [])[:BATCH_MAX] if isinstance(j, dict)]
-    cv = render_profile(d.get("profile")) or _s(d.get("cv"), 20000)
-    if not jobs:
-        return jsonify(error="Requête invalide."), 400
-    if not cv.strip():
-        return jsonify(error="Profil vide : ajoutez votre CV."), 400
+def _model_of(prov):
+    return (os.environ.get("JOBRADAR_MODEL") if prov["kind"] == "anthropic" else None) or prov.get("model", "")
+
+
+def _batch_once(d, cv, jobs):
     offers = "\n".join(f"### Offre {i}\n{_s(j.get('titre'), 200)} chez {_s(j.get('entreprise'), 200)} ({_s(j.get('lieu'), 200)})\n{_s(j.get('description'), 1500)}\n"
                        for i, j in enumerate(jobs))
     res, err = _run(d, BATCH_PROMPT.format(cv=cv, offers=offers), BatchEval)
     if err:
-        return err
+        return None, err
     out = [None] * len(jobs)
     for e in res.evaluations:
         if 0 <= e.ref < len(jobs):
             out[e.ref] = {"match": max(0, min(100, e.match)), "cv_score": max(0, min(100, e.cv_score)), "verdict": e.verdict,
                           "forces": e.forces[:3], "manques": e.manques[:3], "modifs": None}
+    return out, None
+
+
+@app.post("/evaluate_batch")
+def evaluate_batch():
+    """Une seule requête d'IA pour un lot d'offres : le profil n'est envoyé qu'une fois. Les offres que l'IA oublie sont redemandées une fois."""
+    d = _body()
+    prov = PROVIDERS.get(d.get("provider"))
+    jobs = [j for j in (d.get("jobs") if isinstance(d.get("jobs"), list) else []) if isinstance(j, dict)]
+    cv = render_profile(d.get("profile")) or _s(d.get("cv"), 20000)
+    if not prov or not jobs:
+        return jsonify(error="Requête invalide."), 400
+    if not cv.strip():
+        return jsonify(error="Profil vide : ajoutez votre CV."), 400
+    jobs = jobs[:_batch_limit(prov)]
+    out, err = _batch_once(d, cv, jobs)
+    if err:
+        return err
+    missing = [i for i, x in enumerate(out) if x is None]
+    if missing:  # l'IA a sauté des offres : une seule relance, sur celles-là seulement
+        again, err = _batch_once(d, cv, [jobs[i] for i in missing])
+        if not err:
+            for n, i in enumerate(missing):
+                out[i] = again[n]
     return jsonify(results=out)
+
+
+def _job_fp(j):
+    ident = _s(j.get("url"), 500) or f"{_s(j.get('titre'), 200)}|{_s(j.get('entreprise'), 200)}|{_s(j.get('lieu'), 200)}"
+    return hashlib.sha256(f"{_s(j.get('site'), 30)}|{ident}|{_s(j.get('description'), 1500)}".encode()).hexdigest()[:20]
+
+
+@app.post("/keys")
+def keys():
+    """Empreintes de cache : offre + profil + fournisseur/modèle + prompt. Si l'un change, l'empreinte change et l'offre est réévaluée."""
+    d = _body()
+    prov = PROVIDERS.get(d.get("provider"))
+    jobs = [j if isinstance(j, dict) else {} for j in (d.get("jobs") if isinstance(d.get("jobs"), list) else [])][:200]
+    mode = "full" if d.get("mode") == "full" else "light"
+    if not prov:
+        return jsonify(error="Fournisseur inconnu."), 400
+    profile_hash = hashlib.sha256((render_profile(d.get("profile")) or _s(d.get("cv"), 20000)).encode()).hexdigest()[:20]
+    rev = hashlib.sha256(f"{prov['id']}|{_model_of(prov)}|{PROMPT if mode == 'full' else BATCH_PROMPT}".encode()).hexdigest()[:12]
+    return jsonify(keys=[f"{mode[0]}{rev}{profile_hash}{_job_fp(j)}" for j in jobs])
 
 
 @app.post("/evaluate")

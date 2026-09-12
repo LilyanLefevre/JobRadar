@@ -18,6 +18,7 @@ Application web ouverte à des utilisateurs authentifiés par OAuth, qui manipul
 | SSRF | Les URL des fournisseurs viennent d'un fichier fixe, jamais de l'utilisateur. |
 | Entrées invalides ou volumineuses | Champs bornés, taille de requête limitée, erreurs génériques sans détail interne. |
 | Injection de prompt (via une offre ou un CV) | Le contenu est présenté comme donnée à analyser, la sortie est contrainte à un schéma et affichée échappée. Impact limité à l'évaluation de l'utilisateur lui-même. |
+| Données dérivées du CV | La mémoire des évaluations (`eval_cache`) n'a aucune règle d'API, est supprimée avec le compte (cascade) et purgée après 30 jours ; elle est propre à chaque utilisateur (jamais partagée). |
 | PDF malveillants (import du CV) | Taille (5 Mo), pages (15) et texte limités ; analyse dans le worker non-root, en lecture seule, sans capacités ; erreurs génériques ; limitation de débit sur `/jr/cv`. |
 | Chaîne d'approvisionnement | Binaire PocketBase vérifié par SHA-256 au build ; Dependabot ; branche `main` protégée. |
 | Conteneurs | Worker non-root, lecture seule, `cap_drop: ALL`, `no-new-privileges` ; app en lecture seule avec `no-new-privileges`. |
