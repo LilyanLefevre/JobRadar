@@ -19,6 +19,7 @@ Application web ouverte à des utilisateurs authentifiés par OAuth, qui manipul
 | Entrées invalides ou volumineuses | Champs bornés, taille de requête limitée, erreurs génériques sans détail interne. |
 | Injection de prompt (via une offre ou un CV) | Le contenu est présenté comme donnée à analyser, la sortie est contrainte à un schéma et affichée échappée. Impact limité à l'évaluation de l'utilisateur lui-même. |
 | Données dérivées du CV | La mémoire des évaluations (`eval_cache`) n'a aucune règle d'API, est supprimée avec le compte (cascade) et purgée après 30 jours ; elle est propre à chaque utilisateur (jamais partagée). |
+| Alertes planifiées | Chaque passage n'utilise que le profil et la clé de son propriétaire ; plafond d'alertes par compte (3), d'offres évaluées par passage (60) et de relances manuelles (1 par 10 min) ; les collections d'alertes ont des règles d'accès par utilisateur, l'état du dernier passage n'est écrit que par le serveur ; verrou contre les passages simultanés. |
 | PDF malveillants (import du CV) | Taille (5 Mo), pages (15) et texte limités ; analyse dans le worker non-root, en lecture seule, sans capacités ; erreurs génériques ; limitation de débit sur `/jr/cv`. |
 | Chaîne d'approvisionnement | Binaire PocketBase vérifié par SHA-256 au build ; Dependabot ; branche `main` protégée. |
 | Conteneurs | Worker non-root, lecture seule, `cap_drop: ALL`, `no-new-privileges` ; app en lecture seule avec `no-new-privileges`. |

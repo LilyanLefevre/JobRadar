@@ -7,12 +7,12 @@ routerUse((e) => {
   const path = e.request.url.path
   const viaTunnel = !!e.request.header.get("CF-Connecting-IP")
   if (viaTunnel && $os.getenv("ADMIN_PUBLIC") !== "1") {
-    // Liste blanche : par le tunnel, seule la collection des utilisateurs est joignable (par nom OU par identifiant,
+    // Liste blanche : par le tunnel, seules les collections de l'utilisateur (compte, alertes, rapports) sont joignables ; leurs règles limitent chacun à ses propres données (par nom OU par identifiant,
     // les superusers répondent aussi à leur identifiant pbc_…). Les API d'administration sont bloquées (l'interface statique de /_/ reste servie: PocketBase y affiche la page de succès OAuth).
     const coll = path.startsWith("/api/collections") ? path.split("/")[3] || "" : null
     const adminApi = ["/api/settings", "/api/backups", "/api/logs", "/api/crons"]
     if (adminApi.some((p) => path.startsWith(p)) ||
-        (coll !== null && coll !== "users" && coll !== "_pb_users_auth_")) {
+        (coll !== null && !["users", "_pb_users_auth_", "alerts", "alert_runs"].includes(coll))) {
       return e.json(404, { message: "Not found" })
     }
   }
@@ -99,40 +99,53 @@ routerAdd("POST", "/jr/cv/import", (e) => {
 routerAdd("POST", "/jr/evaluate/lookup", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const jobs = e.requestInfo().body.jobs || []
-  const c = lib.evalCtx(e, jobs, "light")
-  if (c.error) return c.error
+  const c = lib.evalCtx(e.auth, jobs, "light")
+  if (c.err) return e.json(c.err.status, c.err.json)
   return e.json(200, { results: c.keys.map((k) => c.hits[k] || null) })
 }, $apis.requireAuth("users"))
 
 routerAdd("POST", "/jr/evaluate/batch", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const jobs = e.requestInfo().body.jobs || []
-  const c = lib.evalCtx(e, jobs, "light")
-  if (c.error) return c.error
-  const results = c.keys.map((k) => c.hits[k] || null)
-  const miss = results.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0)
-  if (miss.length) {
-    const r = lib.worker("/evaluate_batch", { ...c.base, jobs: miss.map((i) => jobs[i]) }, 240)
-    if (r.statusCode !== 200) return e.json(r.statusCode, r.json)
-    miss.forEach((idx, n) => {
-      const res = r.json.results[n]
-      results[idx] = res
-      if (res) lib.cachePut($app, e.auth.id, c.keys[idx], "light", res)
-    })
-  }
-  return e.json(200, { results, cached: jobs.length - miss.length })
+  const ev = lib.evaluateLight(e.auth, jobs)
+  if (ev.error) return e.json(ev.status || 502, { error: ev.error })
+  return e.json(200, { results: ev.results, cached: ev.cached })
 }, $apis.requireAuth("users"))
 
 routerAdd("POST", "/jr/evaluate", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const job = e.requestInfo().body
-  const c = lib.evalCtx(e, [job], "full")
-  if (c.error) return c.error
+  const c = lib.evalCtx(e.auth, [job], "full")
+  if (c.err) return e.json(c.err.status, c.err.json)
   if (c.hits[c.keys[0]]) return e.json(200, { ...c.hits[c.keys[0]], cached: true })
   const r = lib.worker("/evaluate", { ...c.base, job }, 240)
   if (r.statusCode === 200) lib.cachePut($app, e.auth.id, c.keys[0], "full", r.json)
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))
+
+// ---- Alertes quotidiennes ----
+// Les sites d'une alerte sont filtrés sur une liste fixe (à chaque création ou modification).
+onRecordCreateRequest((e) => {
+  const max = parseInt($os.getenv("ALERTS_PER_USER") || "3", 10)
+  const n = $app.countRecords("alerts", $dbx.exp("user = {:u}", { u: e.auth.id }))
+  if (n >= max) throw new BadRequestError(`${max} alertes maximum par compte.`)
+  let sites = []
+  try { sites = JSON.parse(e.record.getString("sites") || "[]") } catch (_) {}
+  sites = sites.filter((s) => ["indeed", "hellowork", "linkedin", "glassdoor"].includes(s))
+  e.record.set("sites", sites.length ? sites : ["indeed", "hellowork"])
+  e.record.set("queued", false)
+  e.record.set("last_status", "")
+  e.next()
+}, "alerts")
+onRecordUpdateRequest((e) => {
+  let sites = []
+  try { sites = JSON.parse(e.record.getString("sites") || "[]") } catch (_) {}
+  sites = sites.filter((s) => ["indeed", "hellowork", "linkedin", "glassdoor"].includes(s))
+  e.record.set("sites", sites.length ? sites : ["indeed", "hellowork"])
+  e.next()
+}, "alerts")
+cronAdd("alertsDaily", $os.getenv("ALERTS_CRON") || "0 7 * * *", () => { require(`${__hooks}/lib.js`).runAllAlerts() })
+cronAdd("alertsQueue", "* * * * *", () => { require(`${__hooks}/lib.js`).runQueued() })
 
 // Purge quotidienne : les évaluations de plus de 30 jours sont oubliées.
 cronAdd("evalCachePurge", "17 4 * * *", () => {

@@ -16,14 +16,14 @@ Chercher des offres (Indeed, HelloWork, LinkedIn, Glassdoor via JobSpy), les fai
 Chaque utilisateur apporte son propre fournisseur d'IA et sa clé (plusieurs gratuits), donc aucun abonnement ni frais côté opérateur. Le CV n'est pas un fichier à écrire : il est importé en PDF, structuré, puis **vérifié et corrigé** par l'utilisateur (catégories d'expériences, compétences, critères de recherche).
 
 ## Operating Context
-Connexion OAuth (GitHub, Google). Trois pages : Recherche (formulaire, liste d'offres triée par score, détail avec description et analyse), Mon profil (import PDF/texte, éditeur de profil structuré), Paramètres (fournisseur d'IA et clé, compte). La recherche fonctionne sans IA ; les scores arrivent ensuite par lots.
+Connexion OAuth (GitHub, Google). Quatre pages : Recherche (formulaire, liste d'offres triée par score, détail avec description et analyse), Alertes (recherches quotidiennes et rapports), Mon profil (import PDF/texte, éditeur de profil structuré), Paramètres (fournisseur d'IA et clé, compte). La recherche fonctionne sans IA ; les scores arrivent ensuite par lots.
 
 ## Capabilities and Constraints
 - Interface en français, HTML/CSS/JS natifs sans étape de build, servie par PocketBase.
 - CSP stricte : aucun style en ligne, aucun script ou police externe (tout est servi depuis l'application).
 - Thème clair et sombre suivant le système.
 - Descriptions d'offres en markdown rendues par un rendu maison sûr (md.js).
-- Non décidé : notifications et recherches automatiques quotidiennes (pas encore construites).
+- Alertes quotidiennes : recherches enregistrées relancées chaque matin avec le profil et la clé de l'utilisateur ; rapport consultable dans l'application (téléphone compris). Non décidé : notifications externes (e-mail, push).
 
 ## Brand Commitments
 Le nom « JobRadar » est conservé. Aucune autre identité visuelle n'est imposée : l'ancienne interface (sobre, vert, gabarit de tableau de bord) est jugée générique et sert d'anti-référence.

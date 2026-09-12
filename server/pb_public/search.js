@@ -1,6 +1,7 @@
 import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store, setupTodo, SITE, SITE_NAME, tier } from './lib.js?v=__V__'
 import { renderMarkdown } from './md.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
+import { openAlertDialog } from './alerts.js?v=__V__'
 
 let running = false, animate = false
 
@@ -141,7 +142,7 @@ function paint() {
     $('#detail').innerHTML = ''; return
   }
   const todo = jobs.filter((j) => !j.ev && !j.evaluating).length
-  list.innerHTML = `<div class="listbar"><span class="muted small">${plural(jobs.length, 'offre')}</span>${canEvaluate() && todo ? `<button class="btn secondary sm" id="evalAll">${ic('sparkle')}Évaluer les ${todo} restantes</button>` : ''}</div>` +
+  list.innerHTML = `<div class="listbar"><span class="muted small">${plural(jobs.length, 'offre')}</span><button class="btn ghost sm" id="mkAlert">${ic('bell')}Créer une alerte</button>${canEvaluate() && todo ? `<button class="btn secondary sm" id="evalAll">${ic('sparkle')}Évaluer les ${todo} restantes</button>` : ''}</div>` +
     jobs.map((j) => `<button class="rowitem" data-id="${esc(j.id)}" aria-current="${j.id === state.selected}">
       <span class="roundel" title="${esc(SITE_NAME[j.site] || j.site)}" aria-hidden="true">${esc(SITE[j.site] || '?')}</span>
       <span><b>${esc(j.titre)}</b><span class="sub">${esc(j.entreprise)} · ${esc(j.lieu)}</span><span class="sr-only"> Source : ${esc(SITE_NAME[j.site] || j.site)}</span></span>
@@ -150,6 +151,7 @@ function paint() {
   if (animate) { animate = false; rows.forEach((b, i) => { b.style.setProperty('--i', Math.min(i, 10)); b.classList.add('enter') }) }
   rows.forEach((b) => (b.onclick = () => { state.selected = b.dataset.id; paint(); if (innerWidth < 1000) $('#detail').scrollIntoView({ behavior: 'smooth' }) }))
   $('#evalAll')?.addEventListener('click', () => evaluateAll(jobs))
+  $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.loc, sites: state.form.sites, hours: 72, min_score: 70 }))
   detail(state.jobs[state.selected])
 }
 
