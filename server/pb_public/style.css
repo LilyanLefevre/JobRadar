@@ -259,8 +259,8 @@ dialog .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;mar
 /* Détail : le match (clé de tri) domine ; le score du CV est secondaire */
 .match.big.second{min-width:72px;height:56px;font-size:36px;line-height:56px}.match.big.second small{font-size:16px}
 .match.big.second.t-strong{outline-offset:-4px;outline-width:1.5px}
-.back{display:none;margin:-8px 0 12px -12px}
-@media (max-width:1000px){.back{display:inline-flex}.detail:has(.hint){display:none}.detail{border:1px solid var(--line)}}
+.detailbar{display:none}
+@media (max-width:1000px){.detail{border:1px solid var(--line)}}
 @media (max-width:720px){
   .appbar .in{height:56px;flex-wrap:nowrap;padding:0 12px;gap:8px}
   .brand span{display:none}
@@ -306,3 +306,21 @@ input[type=range]{padding:0;accent-color:var(--action);min-height:44px}
 .provrow .tools{flex-wrap:nowrap;gap:2px}
 ul.devs li{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}ul.devs li:first-child{border-top:0}
 @media (max-width:720px){.provrow{grid-template-columns:28px minmax(0,1fr)}.provrow .tools{grid-column:1/-1;justify-content:flex-end}}
+
+/* Téléphone : formulaire replié en résumé, liste puis détail en plein écran (comme une application) */
+.searchsum{display:none}
+@media (max-width:1000px){
+  .searchbar.collapsed{display:none}
+  .searchsum{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:10px 10px 10px 16px;box-shadow:var(--shadow)}
+  .searchsum span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .results .detail{display:none}
+  .results.detail-open .detail{display:block}
+  .results.detail-open .list{display:none}
+  .mobile-detail .page-head,.mobile-detail .searchbar,.mobile-detail .searchsum,.mobile-detail .status,.mobile-detail>.banner,.mobile-detail>.mt{display:none}
+  .mobile-detail .results{margin-top:0}
+  .detail{border:0;box-shadow:none;background:transparent;max-height:none;overflow:visible}
+  .detail .sheet{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--panel);box-shadow:var(--shadow)}
+  .detailbar{display:flex;justify-content:space-between;align-items:center;gap:8px;position:sticky;top:56px;z-index:4;background:var(--panel);border-bottom:1px solid var(--line);margin:-20px -20px 16px;padding:8px 12px;border-radius:var(--r-lg) var(--r-lg) 0 0}
+}
+
+@media (max-width:1000px){.sheet .meta a{display:none}} /* le lien « Voir l'offre » est déjà dans la barre du détail */

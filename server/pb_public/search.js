@@ -3,7 +3,8 @@ import { renderMarkdown } from './md.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import { openAlertDialog } from './alerts.js?v=__V__'
 
-let running = false, animate = false
+let running = false, animate = false, formOpen = true, savedScroll = 0, popBound = false
+const mobile = () => matchMedia('(max-width: 1000px)').matches
 
 export function render(root) {
   const r = profile()?.recherche || {}
@@ -14,6 +15,7 @@ export function render(root) {
   root.innerHTML = `
     <div class="page-head tight"><h1>Recherche d'offres</h1></div>
     ${todo.length ? `<div class="banner warn" role="status">${ic('alert')}<div><b>Scores désactivés</b>${todo.map((t) => `<a href="${t.to}">${t.what}</a>`).join(' · ')} pour activer les évaluations. La recherche fonctionne déjà sans.</div></div><div class="mt"></div>` : ''}
+    <div class="searchsum" id="searchsum" hidden><span id="sumtxt"></span><button type="button" class="btn secondary sm" id="editSearch">${ic('pencil')}Modifier</button></div>
     <form class="searchbar" id="form">
       <label class="field"><span>Poste</span><input id="q" value="${esc(f.q)}" placeholder="Développeur web" required></label>
       <label class="field"><span>Lieu</span><input id="loc" value="${esc(f.loc)}" placeholder="Lyon, France"></label>
@@ -26,7 +28,34 @@ export function render(root) {
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="results"><div class="list" id="list"></div><div class="detail" id="detail"></div></div>`
   $('#form').onsubmit = (e) => { e.preventDefault(); launch() }
+  $('#editSearch').onclick = () => { formOpen = true; syncMobile(); window.scrollTo(0, 0); $('#q').focus() }
+  if (!popBound) { popBound = true; addEventListener('popstate', () => { if (state.selected && mobile()) closeDetail(false) }); matchMedia('(max-width: 1000px)').addEventListener('change', syncMobile) }
   paint()
+  syncMobile()
+}
+
+// Sur téléphone : le formulaire se replie en résumé une fois les résultats là, et une offre ouverte occupe tout l'écran.
+function syncMobile() {
+  const form = $('#form'); if (!form) return
+  const collapse = mobile() && Object.keys(state.jobs).length > 0 && !formOpen
+  form.classList.toggle('collapsed', collapse)
+  $('#searchsum').hidden = !collapse
+  $('#sumtxt').innerHTML = `<b>${esc(state.form.q)}</b> · ${esc(state.form.loc || 'France')} · ${plural(state.form.sites.length, 'site')}`
+  const open = mobile() && !!state.selected
+  $('.results')?.classList.toggle('detail-open', open)
+  $('#view').classList.toggle('mobile-detail', open)
+}
+
+function openDetail(id) {
+  state.selected = id
+  if (mobile()) { savedScroll = scrollY; history.pushState({ jr: 'detail' }, '') }
+  paint(); syncMobile()
+  if (mobile()) window.scrollTo(0, 0)
+}
+function closeDetail(viaButton = true) {
+  if (viaButton && history.state?.jr === 'detail') { history.back(); return } // popstate refermera le détail
+  state.selected = null; paint(); syncMobile()
+  window.scrollTo(0, savedScroll)
 }
 
 function readForm() {
@@ -63,9 +92,9 @@ async function runSearch() {
   try {
     const f = state.form
     const res = await call('search', 'POST', { query: f.q, location: f.loc, n: f.n, hours: f.hours, sites: f.sites })
-    state.jobs = {}; state.selected = null; animate = true
+    state.jobs = {}; state.selected = null; animate = true; formOpen = false
     res.jobs.forEach((j) => (state.jobs[j.id] = j))
-    paint()
+    paint(); syncMobile()
     $('#status').textContent = `${plural(res.jobs.length, 'offre')} ${res.jobs.length > 1 ? 'trouvées' : 'trouvée'}.`
     if (canEvaluate() && res.jobs.length) await evaluateAll(res.jobs)
   } catch (e) {
@@ -151,7 +180,7 @@ function paint() {
       ${matchPanel(j)}</button>`).join('')
   const rows = $$('.rowitem', list)
   if (animate) { animate = false; rows.forEach((b, i) => { b.style.setProperty('--i', Math.min(i, 10)); b.classList.add('enter') }) }
-  rows.forEach((b) => (b.onclick = () => { state.selected = b.dataset.id; paint(); if (innerWidth < 1000) $('#detail').scrollIntoView({ behavior: 'smooth' }) }))
+  rows.forEach((b) => (b.onclick = () => openDetail(b.dataset.id)))
   $('#evalAll')?.addEventListener('click', () => evaluateAll(jobs))
   $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.loc, sites: state.form.sites, hours: 72, min_score: 70 }))
   detail(state.jobs[state.selected])
@@ -179,11 +208,11 @@ function detail(j) {
   else body = `<div class="banner warn mt" role="status">${ic('alert')}<div><b>Évaluation indisponible</b>${todo.map((t) => `<a href="${t.to}">${t.what}</a>`).join(' · ')} pour comparer cette offre à votre profil.</div></div>`
   const url = /^https?:\/\//.test(j.url) ? j.url : '#'
   el.innerHTML = `<article class="sheet">
-    <button class="btn ghost sm back" id="back">${ic('left')}Retour aux résultats</button>
+    <div class="detailbar"><button class="btn ghost sm" id="back">${ic('left')}Résultats</button><a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre${ic('external')}</a></div>
     <h2>${esc(j.titre)}</h2>
     <div class="meta"><span>${esc(j.entreprise)}</span><span>${ic('pin')}${esc(j.lieu)}</span><span>${esc(SITE_NAME[j.site] || j.site)}</span><a href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre${ic('external')}</a></div>
     ${body}
     <div class="block"><h3>Description de l'offre</h3><div class="md mt">${j.description ? renderMarkdown(j.description) : '<p class="muted">Aucune description fournie par le site.</p>'}</div></div></article>`
   $('#evalOne')?.addEventListener('click', () => evaluateOne(j))
-  $('#back')?.addEventListener('click', () => $('.listbar').scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  $('#back')?.addEventListener('click', () => closeDetail())
 }
