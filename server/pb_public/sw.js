@@ -3,6 +3,9 @@ const V = '__V__' // change à chaque déploiement : le navigateur met le servic
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
+// Passage direct au réseau : aucun cache. Sa présence suffit à certains navigateurs pour juger l'application installable.
+self.addEventListener('fetch', () => {})
+
 self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data ? e.data.json() : {} } catch { d = { body: e.data ? e.data.text() : '' } }

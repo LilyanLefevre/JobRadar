@@ -23,7 +23,7 @@ Connexion OAuth (GitHub, Google). Quatre pages : Recherche (formulaire, liste d'
 - CSP stricte : aucun style en ligne, aucun script ou police externe (tout est servi depuis l'application).
 - Thème clair et sombre suivant le système.
 - Descriptions d'offres en markdown rendues par un rendu maison sûr (md.js).
-- Alertes quotidiennes : recherches enregistrées relancées chaque matin avec le profil et la clé de l'utilisateur ; rapport consultable dans l'application (téléphone compris). Notifications push (PWA) ; e-mail prévu ensuite.
+- Alertes quotidiennes : recherches enregistrées relancées chaque matin avec le profil et la clé de l'utilisateur ; rapport consultable dans l'application (téléphone compris). Application installable (PWA) avec invitation à l'installation, notifications push ; e-mail prévu ensuite.
 
 ## Brand Commitments
 Le nom « JobRadar » est conservé. Aucune autre identité visuelle n'est imposée : l'ancienne interface (sobre, vert, gabarit de tableau de bord) est jugée générique et sert d'anti-référence.

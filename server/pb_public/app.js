@@ -1,9 +1,10 @@
-import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo } from './lib.js?v=__V__'
+import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo, openDialog } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as search from './search.js?v=__V__'
 import * as profileView from './profile.js?v=__V__'
 import * as settings from './settings.js?v=__V__'
 import * as alertsView from './alerts.js?v=__V__'
+import * as pwa from './install.js?v=__V__'
 
 const routes = { search, alerts: alertsView, profile: profileView, settings }
 
@@ -33,6 +34,7 @@ async function enter() {
     state.providers = providers; state.batch = batch; state.key = key
   } catch (e) { toast(e.message, 'err') }
   chrome()
+  installBar()
   route()
   alertsView.refreshBadge()
 }
@@ -51,6 +53,7 @@ function chrome() {
         <div class="who"><b>${esc(name)}</b><span class="muted small">Connecté</span></div>
         <a role="menuitem" href="#/profile">${ic('user')}Mon profil ${profTag}</a>
         <a role="menuitem" href="#/settings">${ic('settings')}Paramètres ${iaTag}</a>
+        ${pwa.installable() ? `<button role="menuitem" id="installBtn">${ic('download')}Installer l'application</button>` : ''}
         <div class="sep" role="separator"></div>
         <button role="menuitem" id="logoutBtn">${ic('logout')}Se déconnecter</button>
       </div></div>`
@@ -67,10 +70,30 @@ function chrome() {
     else if (e.key === 'Escape') { e.preventDefault(); close(true) }
     else if (e.key === 'Tab') close()
   }
+  $('#installBtn')?.addEventListener('click', () => { close(); pwa.canPrompt() ? pwa.install() : showIosHelp() })
   $('#logoutBtn').onclick = () => { pb.authStore.clear(); location.hash = ''; location.reload() }
 }
 document.addEventListener('click', (e) => { const m = $('#acctMenu'); if (m && !m.hidden && !e.target.closest('.acct')) { m.hidden = true; $('#acctBtn').setAttribute('aria-expanded', 'false') } })
 bus.addEventListener('chrome', chrome)
+
+// Bandeau d'installation (sous la barre) : bouton Installer sur Chrome / Edge / Android, mode d'emploi sur iPhone.
+function showIosHelp() {
+  openDialog(`<h2>Installer JobRadar sur l'iPhone</h2>
+    <ol class="steps"><li>Touchez <b>Partager</b> ${ic('share')} dans la barre de Safari.</li><li>Choisissez <b>Sur l'écran d'accueil</b>.</li><li>Ouvrez JobRadar depuis son icône : les notifications deviennent disponibles.</li></ol>
+    <div class="actions"><button class="btn" data-close="ok">Compris</button></div>`)
+}
+function installBar() {
+  const el = $('#installbar'); if (!el) return
+  const show = pwa.shouldOffer()
+  el.hidden = !show
+  if (!show) { el.innerHTML = ''; return }
+  const ios = !pwa.canPrompt()
+  el.innerHTML = `<div class="in">${ic('download')}<p><b>Installez JobRadar</b> : accès direct depuis l'écran d'accueil et notifications des alertes.</p>
+    <div class="row"><button class="btn sm" id="instGo">${ios ? "Comment faire" : 'Installer'}</button><button class="btn ghost sm" id="instLater">Plus tard</button></div></div>`
+  $('#instGo').onclick = () => (ios ? showIosHelp() : pwa.install())
+  $('#instLater').onclick = () => pwa.dismiss()
+}
+bus.addEventListener('install', () => { installBar(); chrome() })
 
 function route() {
   const name = location.hash.replace(/^#\//, '') || 'search'
