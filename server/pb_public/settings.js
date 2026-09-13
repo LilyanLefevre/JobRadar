@@ -1,4 +1,4 @@
-import { $, $$, esc, call, pb, state, toast, bus, providerLabel, avatarHtml, bindAvatars } from './lib.js?v=__V__'
+import { $, $$, esc, call, pb, state, toast, bus, providerLabel, avatarHtml, bindAvatars, store } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as push from './push.js?v=__V__'
 import * as pwa from './install.js?v=__V__'
@@ -57,6 +57,7 @@ export async function render(root) {
             <p class="muted mt">Recevez une notification quand une alerte trouve de nouvelles offres. Sur téléphone, installez d'abord l'application (menu du navigateur : « Ajouter à l'écran d'accueil »).</p></div>
           ${!push.supported() ? `<div class="banner warn">${ic('alert')}<div><b>Non disponible ici</b>Ce navigateur ne gère pas les notifications push.${push.needsInstall() ? '' : ''}</div></div>`
             : push.needsInstall() ? `<div class="banner warn">${ic('alert')}<div><b>Installez l'application</b>Sur iPhone, ouvrez le menu Partager, choisissez « Sur l'écran d'accueil », puis ouvrez JobRadar depuis l'icône pour activer les notifications.</div></div>`
+            : Notification.permission === 'denied' ? `<div class="banner warn">${ic('alert')}<div><b>Notifications bloquées</b>Le navigateur a refusé les notifications pour ce site. Autorisez-les dans ses réglages (icône à gauche de l'adresse, puis « Notifications »), et revenez ici.</div></div>`
             : `<div class="row"><button class="btn ${sub ? 'secondary' : ''}" id="pushToggle">${ic('bell')}${sub ? 'Désactiver sur cet appareil' : 'Activer sur cet appareil'}</button>
                 ${devices.length ? '<button class="btn secondary" id="pushTest">Envoyer une notification de test</button>' : ''}</div>`}
           ${pwa.canPrompt() ? `<div class="row"><button class="btn secondary" id="installApp">${ic('download')}Installer l'application</button></div>` : ''}
@@ -98,14 +99,14 @@ export async function render(root) {
   $('#clearCache')?.addEventListener('click', async () => { await call('cache', 'DELETE'); toast('Mémoire des évaluations vidée.') })
   $('#pushToggle')?.addEventListener('click', async (e) => {
     e.currentTarget.disabled = true
-    try { sub ? await push.disable() : await push.enable(); toast(sub ? 'Notifications désactivées.' : 'Notifications activées sur cet appareil.'); render(root) }
+    try { if (sub) { await push.disable(); store.set('jr_notif_dismissed', '9') /* choix volontaire : on ne redemande pas */ } else { await push.enable() } toast(sub ? 'Notifications désactivées.' : 'Notifications activées sur cet appareil.'); bus.dispatchEvent(new Event('push')); render(root) }
     catch (err) { toast(err.message, 'err'); e.target.disabled = false }
   })
   $('#installApp')?.addEventListener('click', async () => { await pwa.install(); render(root) })
   $('#pushTest')?.addEventListener('click', async () => {
     try { const r = await call('push/test', 'POST', {}); toast(r.push ? 'Notification envoyée.' : "Aucune notification n'a pu être envoyée.", r.push ? '' : 'err') } catch (err) { toast(err.message, 'err') }
   })
-  $$('[data-dev]').forEach((b) => (b.onclick = async () => { await call('push/unsubscribe', 'POST', { id: b.dataset.dev }); toast('Appareil retiré.'); render(root) }))
+  $$('[data-dev]').forEach((b) => (b.onclick = async () => { await call('push/unsubscribe', 'POST', { id: b.dataset.dev }); toast('Appareil retiré.'); bus.dispatchEvent(new Event('push')); render(root) }))
   $('#logout').onclick = () => { pb.authStore.clear(); location.hash = ''; location.reload() }
   $('#delAccount').onclick = async () => {
     if (!confirm('Supprimer définitivement votre compte, votre profil et vos clés API ?')) return

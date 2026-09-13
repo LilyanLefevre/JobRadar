@@ -1,10 +1,11 @@
-import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo, openDialog, avatarHtml, bindAvatars } from './lib.js?v=__V__'
+import { pb, $, $$, esc, call, state, bus, toast, store, hasProfile, profile, providerLabel, setupTodo, openDialog, avatarHtml, bindAvatars } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as search from './search.js?v=__V__'
 import * as profileView from './profile.js?v=__V__'
 import * as settings from './settings.js?v=__V__'
 import * as alertsView from './alerts.js?v=__V__'
 import * as pwa from './install.js?v=__V__'
+import * as push from './push.js?v=__V__'
 
 const routes = { search, alerts: alertsView, profile: profileView, settings }
 
@@ -34,7 +35,8 @@ async function enter() {
     state.providers = providers; state.batch = batch; state.key = key
   } catch (e) { toast(e.message, 'err') }
   chrome()
-  installBar()
+  await refreshPushState()
+  banner()
   route()
   alertsView.refreshBadge()
 }
@@ -82,18 +84,45 @@ function showIosHelp() {
     <ol class="steps"><li>Touchez <b>Partager</b> ${ic('share')} dans la barre de Safari.</li><li>Choisissez <b>Sur l'écran d'accueil</b>.</li><li>Ouvrez JobRadar depuis son icône : les notifications deviennent disponibles.</li></ol>
     <div class="actions"><button class="btn" data-close="ok">Compris</button></div>`)
 }
-function installBar() {
+// Invitation aux notifications : dès qu'il y a quelque chose à notifier (au moins une alerte), tant que cet appareil n'est pas abonné.
+// Jamais d'insistance : « Plus tard » repousse de 7 jours, deux refus arrêtent, et un refus du navigateur ou une désactivation volontaire sont respectés.
+let alertCount = 0, hasSub = false
+const nsKey = (k) => Number(store.get('jr_notif_' + k) || 0)
+const notifSnoozed = () => Date.now() < nsKey('until') || nsKey('dismissed') >= 2
+export const notifDismiss = (forever = false) => { store.set('jr_notif_dismissed', String(forever ? 9 : nsKey('dismissed') + 1)); store.set('jr_notif_until', String(Date.now() + 7 * 86400000)); banner() }
+const notifEligible = () => push.supported() && !push.needsInstall() && Notification.permission !== 'denied' && !hasSub && alertCount > 0 && !notifSnoozed()
+async function refreshPushState() {
+  if (push.supported()) { try { hasSub = !!(await push.currentSubscription()) } catch { hasSub = false } }
+  try { alertCount = (await pb.collection('alerts').getList(1, 1, { requestKey: null })).totalItems } catch { /* sans alertes connues, pas d'invitation */ }
+}
+
+// Un seul bandeau à la fois sous la barre : notifications d'abord, puis installation de l'application.
+function banner() {
   const el = $('#installbar'); if (!el) return
-  const show = pwa.shouldOffer()
-  el.hidden = !show
-  if (!show) { el.innerHTML = ''; return }
+  const notif = notifEligible(), inst = !notif && pwa.shouldOffer()
+  el.hidden = !(notif || inst)
+  if (el.hidden) { el.innerHTML = ''; return }
+  if (notif) {
+    el.innerHTML = `<div class="in">${ic('bell')}<p><b>Activez les notifications</b> : soyez prévenu dès qu'une alerte trouve de nouvelles offres.</p>
+      <div class="row"><button class="btn sm" id="ntGo">Activer</button><button class="btn ghost sm" id="ntLater">Plus tard</button></div></div>`
+    $('#ntGo').onclick = async () => {
+      $('#ntGo').disabled = true
+      try { await push.enable(); hasSub = true; toast('Notifications activées sur cet appareil.'); bus.dispatchEvent(new Event('push')) }
+      catch (e) { toast(e.message, 'err'); if (Notification.permission === 'denied') notifDismiss(true) }
+      banner()
+    }
+    $('#ntLater').onclick = () => notifDismiss()
+    return
+  }
   const ios = !pwa.canPrompt()
   el.innerHTML = `<div class="in">${ic('download')}<p><b>Installez JobRadar</b> : accès direct depuis l'écran d'accueil et notifications des alertes.</p>
-    <div class="row"><button class="btn sm" id="instGo">${ios ? "Comment faire" : 'Installer'}</button><button class="btn ghost sm" id="instLater">Plus tard</button></div></div>`
+    <div class="row"><button class="btn sm" id="instGo">${ios ? 'Comment faire' : 'Installer'}</button><button class="btn ghost sm" id="instLater">Plus tard</button></div></div>`
   $('#instGo').onclick = () => (ios ? showIosHelp() : pwa.install())
   $('#instLater').onclick = () => pwa.dismiss()
 }
-bus.addEventListener('install', () => { installBar(); chrome() })
+bus.addEventListener('install', () => { banner(); chrome() })
+// Alertes créées ou supprimées, notifications activées ou désactivées : on réévalue tout de suite (l'invitation arrive juste après la création d'une alerte).
+for (const ev of ['alerts', 'push']) bus.addEventListener(ev, () => refreshPushState().then(banner))
 
 function route() {
   const name = location.hash.replace(/^#\//, '') || 'search'
