@@ -7,8 +7,7 @@
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
     "model": "gemini-2.5-flash",
     "key_url": "https://aistudio.google.com/apikey",
-    "note": "Offre gratuite sans carte bancaire. En gratuit, Google peut utiliser vos données pour améliorer ses produits.",
-    "batch": 25
+    "note": "Offre gratuite sans carte bancaire. En gratuit, Google peut utiliser vos données pour améliorer ses produits."
   },
   {
     "id": "mistral",
@@ -18,8 +17,7 @@
     "base_url": "https://api.mistral.ai/v1",
     "model": "mistral-small-latest",
     "key_url": "https://console.mistral.ai/api-keys",
-    "note": "Entreprise française. Le palier gratuit demande d'accepter l'usage des données pour l'entraînement.",
-    "batch": 15
+    "note": "Entreprise française. Le palier gratuit demande d'accepter l'usage des données pour l'entraînement."
   },
   {
     "id": "groq",
@@ -29,8 +27,7 @@
     "base_url": "https://api.groq.com/openai/v1",
     "model": "llama-3.3-70b-versatile",
     "key_url": "https://console.groq.com/keys",
-    "note": "Offre gratuite avec limites de débit. Serveurs aux États-Unis.",
-    "batch": 8
+    "note": "Offre gratuite avec limites de débit. Serveurs aux États-Unis."
   },
   {
     "id": "zai",
@@ -40,8 +37,7 @@
     "base_url": "https://api.z.ai/api/paas/v4",
     "model": "glm-4.7-flash",
     "key_url": "https://z.ai/manage-apikey/apikey-list",
-    "note": "Modèle gratuit, limité en débit. Données traitées par un fournisseur chinois.",
-    "batch": 10
+    "note": "Modèle gratuit, limité en débit. Données traitées par un fournisseur chinois."
   },
   {
     "id": "deepseek",
@@ -51,8 +47,7 @@
     "base_url": "https://api.deepseek.com",
     "model": "deepseek-chat",
     "key_url": "https://platform.deepseek.com/api_keys",
-    "note": "Payant mais très bon marché. Données traitées par un fournisseur chinois.",
-    "batch": 20
+    "note": "Payant mais très bon marché. Données traitées par un fournisseur chinois."
   },
   {
     "id": "anthropic",
@@ -61,7 +56,6 @@
     "free": false,
     "model": "claude-opus-5-5",
     "key_url": "https://console.anthropic.com/settings/keys",
-    "note": "Meilleure qualité, payant à l'usage (crédits sur console.anthropic.com, distincts d'un abonnement Claude Pro).",
-    "batch": 25
+    "note": "Meilleure qualité, payant à l'usage (crédits sur console.anthropic.com, distincts d'un abonnement Claude Pro)."
   }
 ]

@@ -8,6 +8,7 @@ export const bus = new EventTarget()
 // État partagé entre les vues (conservé pendant la navigation).
 export const state = {
   providers: [],
+  batch: 15,
   key: { has_key: false, provider: '' },
   jobs: {},
   selected: null,

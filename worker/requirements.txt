@@ -6,3 +6,4 @@ cryptography
 requests
 pydantic
 pypdf
+pywebpush
