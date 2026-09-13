@@ -61,3 +61,18 @@ export const store = {
   get: (k) => { try { return localStorage.getItem(k) } catch { return null } },
   set: (k, v) => { try { localStorage.setItem(k, v) } catch {} },
 }
+
+// Photo du compte (reprise du fournisseur OAuth par PocketBase) ; repli sur les initiales si absente ou illisible.
+export const initials = (name) => String(name || '').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join('').toUpperCase() || '?'
+export function avatarUrl(px = 96) {
+  const r = pb.authStore.record
+  return r?.avatar ? pb.files.getURL(r, r.avatar, { thumb: `${px >= 100 ? 192 : 96}x${px >= 100 ? 192 : 96}` }) : ''
+}
+export const avatarHtml = (px, cls = '') => {
+  const u = avatarUrl(px), r = pb.authStore.record || {}, ini = esc(initials(r.name || r.email))
+  return `<span class="pic ${cls}" data-ini="${ini}">${u ? `<img src="${esc(u)}" alt="" width="${px}" height="${px}" loading="lazy" decoding="async">` : ini}</span>`
+}
+// Une image qui ne charge pas (ou une photo supprimée) laisse place aux initiales.
+export function bindAvatars(root = document) {
+  root.querySelectorAll('.pic img').forEach((img) => img.addEventListener('error', () => { img.parentElement.textContent = img.parentElement.dataset.ini }, { once: true }))
+}

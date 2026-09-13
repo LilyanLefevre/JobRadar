@@ -1,4 +1,4 @@
-import { $, $$, esc, call, pb, state, toast, bus, providerLabel } from './lib.js?v=__V__'
+import { $, $$, esc, call, pb, state, toast, bus, providerLabel, avatarHtml, bindAvatars } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as push from './push.js?v=__V__'
 import * as pwa from './install.js?v=__V__'
@@ -67,12 +67,13 @@ export async function render(root) {
 
       <aside class="stack" aria-labelledby="acc-t">
         <h2 id="acc-t">Compte</h2>
-        <p class="muted">Connecté en tant que <b>${esc(pb.authStore.record?.name || pb.authStore.record?.email || '')}</b>.</p>
+        <div class="whoami">${avatarHtml(96, 'lg')}<p class="muted">Connecté en tant que <b>${esc(pb.authStore.record?.name || pb.authStore.record?.email || '')}</b>.</p></div>
         <div class="row"><button class="btn secondary" id="logout">${ic('logout')}Se déconnecter</button>
           <button class="btn danger" id="delAccount">Supprimer mon compte et mes données</button></div>
       </aside>
     </div>`
 
+  bindAvatars(root)
   const note = () => {
     const p = state.providers.find((x) => x.id === $('#prov').value)
     $('#provNote').innerHTML = p ? `${esc(p.note)} <a href="${esc(p.key_url)}" target="_blank" rel="noopener">Obtenir une clé</a>` : ''

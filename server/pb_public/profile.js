@@ -1,4 +1,4 @@
-import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, bus, hasProfile, profile } from './lib.js?v=__V__'
+import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, bus, hasProfile, profile, avatarHtml, bindAvatars } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 
 const CATEGORIES = ['Emploi', 'Stage', 'Alternance', 'Freelance', 'Projet', 'Bénévolat']
@@ -7,7 +7,7 @@ const NIVEAUX = ['', 'Junior', 'Confirmé', 'Senior']
 const TELETRAVAIL = [['', 'Indifférent'], ['oui', 'Télétravail complet'], ['hybride', 'Hybride'], ['non', 'Sur site']]
 const LANGUE_NIVEAUX = ['', 'Débutant', 'Intermédiaire', 'Courant', 'Bilingue / natif']
 
-const blank = () => ({ identite: { nom: '', titre: '', lieu: '' }, resume: '', experiences: [], formations: [], competences: [], langues: [],
+const blank = () => ({ identite: { nom: pb.authStore.record?.name || '', titre: '', lieu: '' }, resume: '', experiences: [], formations: [], competences: [], langues: [],
   recherche: { metiers: [], contrats: [], lieux: [], teletravail: '', niveau: '' }, verifie: false })
 const factories = {
   experiences: () => ({ categorie: 'Emploi', poste: '', entreprise: '', lieu: '', debut: '', fin: '', description: '' }),
@@ -106,7 +106,7 @@ function renderEditor(root) {
       <nav class="toc" aria-label="Sections du profil">${SECTIONS.map(([id, t]) => `<a href="#/profile" data-scroll="${id}">${t}</a>`).join('')}</nav>
       <div>
         <section class="psec" id="p-identite" aria-labelledby="h-identite">${sectionHead('p-identite', '<span id="h-identite">Identité</span>', '', '')}
-          <div class="grid3">${input('Nom', 'identite.nom', p.identite.nom)}${input('Titre / poste actuel', 'identite.titre', p.identite.titre, { ph: 'Développeur web' })}${input('Localisation', 'identite.lieu', p.identite.lieu, { ph: 'Lyon' })}</div>
+          <div class="idblock">${pb.authStore.record?.avatar ? avatarHtml(192, 'xl') : ''}<div class="grid3">${input('Nom', 'identite.nom', p.identite.nom)}${input('Titre / poste actuel', 'identite.titre', p.identite.titre, { ph: 'Développeur web' })}${input('Localisation', 'identite.lieu', p.identite.lieu, { ph: 'Lyon' })}</div></div>
           <div class="mt">${input('Résumé', 'resume', p.resume, { area: true, rows: 4 })}</div></section>
 
         <section class="psec" id="p-experiences">${sectionHead('p-experiences', 'Expériences', 'Classez chaque élément : emploi, stage, alternance, freelance, projet ou bénévolat.', 'experiences')}
@@ -136,6 +136,7 @@ function renderEditor(root) {
       </div>
     </div>`
 
+  bindAvatars(root)
   const markDirty = () => { dirty = true; $('#dirty').hidden = false }
   root.oninput = root.onchange = (e) => {
     const t = e.target
