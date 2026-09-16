@@ -22,7 +22,8 @@ L'interface a quatre pages : **Recherche**, **Alertes**, **Mon profil** et **Par
 2. **Paramètres** : l'utilisateur ajoute **un ou plusieurs fournisseurs d'IA** avec leur clé API (vérifiée, puis stockée chiffrée) et les classe par priorité. Le premier est utilisé ; s'il est indisponible (limite de débit, panne, crédit épuisé, clé refusée), JobRadar bascule automatiquement sur le suivant et met le fautif en pause quelques minutes (24 h si la clé est refusée).
 3. **Mon profil** : il importe son CV en **PDF** (ou colle son texte, ou remplit à la main). Le texte est extrait puis structuré par son IA. Il **vérifie et corrige** ensuite chaque information : identité, expériences (avec leur *catégorie* : emploi, stage, alternance, freelance, projet, bénévolat), formations, compétences classées par catégorie, langues et critères de recherche (postes visés, contrats, lieux, télétravail, niveau). Le PDF n'est pas conservé ; l'utilisateur n'écrit jamais de fichier markdown.
 4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match. Les scores sont calculés **par lot de 15 offres en une seule requête d'IA** (le profil n'est envoyé qu'une fois ; taille unique pour tous les fournisseurs, réglable avec `EVAL_BATCH`, pour que la bascule marche avec n'importe lequel). Une offre déjà évaluée pour le même profil n'est **pas réévaluée** (mémoire par empreinte), et si l'IA saute une offre d'un lot, elle est redemandée une fois. Les modifications de CV, plus coûteuses, se demandent offre par offre.
-5. Pour chaque offre, la **description complète** s'affiche directement (rendue en mise en forme, pas en markdown brut), avec : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
+5. **Sur téléphone**, le formulaire se replie en résumé une fois les résultats là, et une offre ouverte prend tout l'écran (barre « Résultats » / « Voir l'offre » collée en haut, le bouton retour du navigateur la referme).
+6. Pour chaque offre, la **description complète** s'affiche directement (rendue en mise en forme, pas en markdown brut), avec : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
 
 **Alertes quotidiennes** : depuis une recherche (« Créer une alerte ») ou la page Alertes, l'utilisateur enregistre jusqu'à 3 recherches (poste, lieu, sites, ancienneté, score minimum). Chaque matin, JobRadar les relance avec **le profil et la clé de cet utilisateur**, écarte les offres déjà vues, évalue les nouvelles (par lot, avec la mémoire) et publie un **rapport** : seules les nouvelles offres au-dessus du score apparaissent, avec une pastille de rapports non lus dans la navigation. La page est pensée pour le téléphone. « Lancer maintenant » déclenche un passage à la demande (un par 10 minutes et par alerte). Dès qu'une alerte existe, l'application **propose d'activer les notifications** (bandeau sous la barre, juste après la création d'une alerte et à chaque ouverture tant que l'appareil n'est pas abonné ; « Plus tard » repousse de 7 jours, deux refus arrêtent, une désactivation volontaire ou un blocage du navigateur sont respectés). Quand un passage trouve du nouveau, une **notification push** est envoyée aux appareils abonnés (l'e-mail viendra ensuite, par le même point d'envoi).
 
@@ -36,26 +37,28 @@ Direction « signalisation routière » : le match d'une offre se lit comme une 
 
 ```mermaid
 flowchart LR
-    U([Navigateur]) -->|HTTPS| T[Tunnel Cloudflare<br/><i>optionnel</i>]
+    U([Navigateur / PWA]) -->|HTTPS| T[Tunnel Cloudflare<br/><i>optionnel</i>]
     T --> PB
     U -.->|réseau local| PB
 
     subgraph Hôte Docker
-        PB["<b>app</b> : PocketBase<br/>comptes OAuth2 · CV · interface<br/>routes /jr/* (hooks JS)"]
-        W["<b>worker</b> : Python / Flask<br/>JobSpy · appels aux IA<br/><i>réseau interne, non exposé</i>"]
-        DB[("pb_data<br/>SQLite : comptes, CV,<br/>clés API chiffrées")]
+        PB["<b>app</b> : PocketBase<br/>comptes OAuth2 · profils · alertes<br/>routes /jr/* · planificateur<br/>interface installable (PWA)"]
+        W["<b>worker</b> : Python / Flask<br/>JobSpy · appels aux IA · Web Push<br/><i>réseau interne, non exposé</i>"]
+        DB[("pb_data (SQLite)<br/>comptes, profils, clés chiffrées,<br/>alertes, rapports, mémoire")]
         PB -->|WORKER_SECRET| W
         PB --- DB
     end
 
-    W -->|scraping| JB[(Indeed · LinkedIn · Glassdoor)]
-    W -->|clé API de l'utilisateur| IA[(Gemini · Mistral · Groq<br/>Z.ai · DeepSeek · Claude)]
+    W -->|scraping| JB[(Indeed · HelloWork<br/>LinkedIn · Glassdoor)]
+    W -->|clés des utilisateurs, bascule| IA[(Gemini · Mistral · Groq<br/>Z.ai · DeepSeek · Claude)]
+    W -->|messages chiffrés| PS[(Services de push<br/>Google · Mozilla · Apple · Microsoft)]
+    PS -.->|notification| U
 ```
 
 | Composant | Rôle |
 |---|---|
-| **app** (`server/`) | PocketBase : connexion OAuth2, stockage du profil, limitation de débit, en-têtes de sécurité, interface web statique (modules JS sans build) et routes `/jr/*`. C'est la seule porte d'entrée. |
-| **worker** (`worker/`) | Service Python interne : recherche d'offres (JobSpy), vérification et chiffrement des clés, extraction du texte des PDF (pypdf) et structuration du CV, évaluation par le fournisseur d'IA choisi. N'accepte que les appels de l'app (secret partagé). |
+| **app** (`server/`) | PocketBase : connexion OAuth2, stockage (profil, clés chiffrées, alertes, rapports, mémoire des évaluations), limitation de débit, en-têtes de sécurité, interface web statique (modules JS sans build, installable en PWA) et routes `/jr/*` (hooks JS). Il orchestre : bascule entre fournisseurs d'IA, mémoire, passages d'alertes planifiés (cron), envoi des notifications. C'est la seule porte d'entrée. |
+| **worker** (`worker/`) | Service Python interne et sans état : recherche d'offres (JobSpy), vérification et chiffrement des clés, extraction du texte des PDF (pypdf) et structuration du CV, évaluation par le fournisseur d'IA demandé, empreintes de cache, envoi Web Push (VAPID). N'accepte que les appels de l'app (secret partagé). |
 | **cloudflared** | Optionnel : expose l'app sur Internet sans ouvrir de port. |
 
 ### Le parcours d'une évaluation
@@ -65,17 +68,16 @@ sequenceDiagram
     actor U as Utilisateur
     participant A as app (PocketBase)
     participant W as worker
-    participant IA as Fournisseur d'IA
+    participant IA as Fournisseurs d'IA
 
-    U->>A: POST /jr/key (fournisseur + clé)
+    U->>A: POST /jr/key (fournisseur + clé, un ou plusieurs)
     A->>W: /seal
     W->>IA: vérifie la clé
     W-->>A: clé chiffrée (Fernet)
     A->>A: stocke dans « secrets » (aucun accès API)
 
     U->>A: POST /jr/cv/import (PDF en base64 ou texte)
-    A->>W: /cv/extract (clé chiffrée)
-    W->>W: extrait le texte du PDF
+    A->>W: /cv/extract (1er fournisseur disponible)
     W->>IA: structure le CV (JSON)
     W-->>U: profil à vérifier et corriger
     U->>A: enregistre le profil validé (users.profile)
@@ -84,19 +86,49 @@ sequenceDiagram
     A->>W: /search (id utilisateur)
     W-->>U: offres + descriptions (via app)
 
-    loop pour chaque offre
-        U->>A: POST /jr/evaluate (offre)
-        A->>W: /evaluate (clé chiffrée + profil + offre)
-        W->>W: déchiffre la clé
-        W->>IA: prompt profil + offre
+    U->>A: POST /jr/evaluate/lookup (offres affichées)
+    A->>W: /keys (empreintes : offre + profil + prompt)
+    A-->>U: évaluations déjà en mémoire
+
+    loop par lot de 15 offres inconnues
+        U->>A: POST /jr/evaluate/batch
+        A->>W: /evaluate_batch (profil + lot, clé du 1er fournisseur)
+        W->>IA: un seul prompt pour tout le lot
+        alt fournisseur indisponible (débit, panne, clé refusée)
+            A->>W: même lot avec le fournisseur suivant
+        end
         IA-->>W: JSON structuré
-        W-->>U: scores + modifications
+        A->>A: mémorise (30 jours)
+        A-->>U: scores
     end
+
+    U->>A: POST /jr/evaluate (une offre : modifications du CV)
+```
+
+### Le parcours d'une alerte
+
+```mermaid
+sequenceDiagram
+    participant C as Planificateur (cron, 7 h)
+    participant A as app
+    participant W as worker
+    participant PS as Service de push
+    actor U as Téléphone
+
+    C->>A: pour chaque alerte active
+    A->>W: /search (passage planifié)
+    A->>A: écarte les offres déjà vues
+    A->>W: /evaluate_batch (mémoire, bascule)
+    A->>A: enregistre le rapport (offres ≥ score)
+    A->>W: /push (nouvelles offres)
+    W->>PS: message chiffré (VAPID)
+    PS->>U: notification
+    U->>A: ouvre la page Alertes
 ```
 
 ## Fournisseurs d'IA
 
-Définis dans [`worker/providers.json`](worker/providers.json) (identifiant, libellé, URL, modèle, mention de confidentialité). Pour en ajouter un : toute API compatible OpenAI (`"kind": "openai"`) s'ajoute avec une entrée, sans toucher au code.
+Un utilisateur peut en configurer plusieurs et les classer par priorité (bascule automatique). Définis dans [`worker/providers.json`](worker/providers.json) (identifiant, libellé, URL, modèle, mention de confidentialité). Pour en ajouter un : toute API compatible OpenAI (`"kind": "openai"`) s'ajoute avec une entrée, sans toucher au code.
 
 | Fournisseur | Gratuit | Remarque |
 |---|---|---|
@@ -167,16 +199,21 @@ https://<votre-domaine>/api/oauth2-redirect
 ```
 La connexion par mot de passe est désactivée : les comptes ne se créent que par OAuth.
 
+Google : dans la console Google Cloud, configurez l'écran de consentement (type Externe, **publié**), puis créez un *ID client OAuth* de type *Application Web* avec l'URI de redirection ci-dessus. GitHub : *Settings > Developer settings > OAuth Apps*, avec la même URL de rappel.
+
 ### 3. Exposer sur Internet (optionnel)
 1. Créez un tunnel dans le tableau de bord Cloudflare (Zero Trust > Networks > Tunnels) et ajoutez un *Public Hostname* vers le service `http://app:8090`.
 2. Dans `.env` : `COMPOSE_PROFILES=tunnel` et `CLOUDFLARED_TOKEN=<jeton>`, puis `docker compose up -d`.
 
-Quand la requête arrive par le tunnel, seule la collection des utilisateurs est joignable : les API d'administration (connexion superuser, réglages, sauvegardes, logs…) sont **bloquées**, par nom comme par identifiant. L'interface statique de `/_/` reste servie (PocketBase y affiche la page de succès de la connexion OAuth) mais ne peut pas se connecter. Pour administrer, passez par le port local ou un tunnel SSH :
+Quand la requête arrive par le tunnel, seules les collections de l'utilisateur (compte, alertes, rapports) sont joignables, chacune limitée à ses propres données par ses règles d'accès : les API d'administration (connexion superuser, réglages, sauvegardes, logs…) sont **bloquées**, par nom comme par identifiant. L'interface statique de `/_/` reste servie (PocketBase y affiche la page de succès de la connexion OAuth) mais ne peut pas se connecter. Pour administrer, passez par le port local ou un tunnel SSH :
 ```bash
 ssh -L 8090:127.0.0.1:8090 <hôte>   # puis http://localhost:8090/_/
 ```
 
-### 4. Inviter des amis
+### 4. Notifications et installation
+Les notifications push et l'installation en PWA demandent **HTTPS** (le tunnel Cloudflare suffit). Renseignez `VAPID_SUBJECT` (votre adresse, `mailto:vous@exemple.com`) dans `.env` ; les clés VAPID sont générées automatiquement au premier usage et mémorisées en base. Chaque utilisateur active les notifications depuis l'application (bandeau proposé dès qu'il crée une alerte, ou Paramètres).
+
+### 5. Inviter des amis
 Mettez leurs e-mails dans `SIGNUP_ALLOWLIST`, puis `docker compose up -d`. Chacun choisit son fournisseur d'IA et ajoute sa clé.
 
 ### Sauvegarde et mise à jour
@@ -211,9 +248,9 @@ WORKER_URL=http://127.0.0.1:5055 WORKER_SECRET=dev \
   --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public
 ```
 
-Tests : `node --test tests/md.test.mjs` vérifie le rendu des descriptions (titres, listes, jamais de HTML actif).
+Tests : `node --test tests/md.test.mjs` vérifie le rendu des descriptions (titres, listes, jamais de HTML actif). C'est le seul test automatisé versionné. Les parcours de bout en bout (bascule entre fournisseurs, mémoire, alertes, notifications, installation, mobile) ont été vérifiés avec des scripts Playwright et des faux services locaux (fournisseur d'IA, OIDC, service de push) qui ne sont pas dans ce dépôt.
 
-Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local.
+Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local. Pour tester les notifications, `PUSH_ALLOWED_HOSTS=127.0.0.1` (variable du worker, **jamais en production**) autorise un faux service de push local.
 
 ## Sécurité et données
 
@@ -222,7 +259,8 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 - Connexion OAuth2 uniquement ; création de compte directe par l'API refusée (règle `@request.context = 'oauth2'`) ; inscription limitable par liste d'invités.
 - Les clés API sont vérifiées puis **chiffrées** (Fernet) dans une collection sans aucune règle d'API : elles ne sont jamais renvoyées au navigateur.
 - Le worker n'est pas exposé ; il vérifie un secret partagé à chaque appel.
-- Limitation de débit, en-têtes de sécurité (CSP stricte, HSTS), API d'administration inaccessibles par le tunnel public (liste blanche de collections).
+- Limitation de débit, en-têtes de sécurité (CSP stricte, HSTS), API d'administration inaccessibles par le tunnel public (liste blanche de collections : compte, alertes, rapports).
+- Notifications push chiffrées de bout en bout, envoyées uniquement aux vrais services de push (pas d'appel vers le réseau interne) ; la mémoire des évaluations, les alertes et leurs rapports sont propres à chaque utilisateur et supprimés avec le compte.
 - Conteneurs durcis : worker non-root, système de fichiers en lecture seule, sans capacités.
 - Chaque utilisateur peut **supprimer son compte** depuis l'interface (CV et clé API supprimés en cascade).
 
@@ -245,13 +283,21 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ├── .env.example              # modèle de configuration
 ├── server/                   # PocketBase
 │   ├── Dockerfile            # binaire vérifié par SHA-256, amd64 + arm64
-│   ├── pb_migrations/        # schéma : profil, secrets, fournisseur, limites de débit, règle d'inscription
-│   ├── pb_hooks/             # routes /jr/*, sécurité (en-têtes, admin, inscriptions)
-│   └── pb_public/            # interface : index.html, style.css, app.js (routeur, menu de compte), search/profile/settings/md/icons.js, fonts/, SDK PocketBase
+│   ├── pb_migrations/        # schéma, dans l'ordre : 1 utilisateurs/secrets · 2 fournisseur · 3 limites de débit · 4 règle d'inscription
+│   │                         #   5 profil · 6 mémoire des évaluations · 7 alertes · 8 multi-fournisseurs + push · 9 limite des tests push · 10 miniatures de photo
+│   ├── pb_hooks/
+│   │   ├── jobradar.pb.js    # routes /jr/*, en-têtes de sécurité, filtre du tunnel, inscriptions, planification (cron)
+│   │   └── lib.js            # bascule entre fournisseurs, mémoire, passages d'alertes, notifications
+│   └── pb_public/            # interface (modules JS sans build, versionnés par URL)
+│       ├── index.html · style.css · app.js          # coque, thème, routeur, menu de compte, bandeaux d'invitation
+│       ├── search.js · alerts.js · profile.js · settings.js   # les quatre pages
+│       ├── lib.js · icons.js · md.js                # utilitaires, icônes dessinées, rendu markdown sûr
+│       ├── push.js · install.js · sw.js · manifest.webmanifest   # PWA : notifications, installation, service worker
+│       └── fonts/ · icons/ · pocketbase.umd.js      # Barlow hébergé, icônes de l'app, SDK PocketBase
+├── worker/                   # service Python interne
+│   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation, empreintes, Web Push
+│   └── providers.json        # fournisseurs d'IA et modèles
 ├── tests/                    # tests du rendu markdown des descriptions
 ├── PRODUCT.md · DESIGN.md    # contexte produit et système de design
-├── worker/                   # service Python interne
-│   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation
-│   └── providers.json        # fournisseurs d'IA et modèles
 └── .github/                  # déploiement continu, Dependabot
 ```

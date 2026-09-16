@@ -16,7 +16,7 @@ Chercher des offres (Indeed, HelloWork, LinkedIn, Glassdoor via JobSpy), les fai
 Chaque utilisateur apporte ses propres fournisseurs d'IA (un ou plusieurs, avec bascule automatique) et ses clés (plusieurs gratuits), donc aucun abonnement ni frais côté opérateur. Le CV n'est pas un fichier à écrire : il est importé en PDF, structuré, puis **vérifié et corrigé** par l'utilisateur (catégories d'expériences, compétences, critères de recherche).
 
 ## Operating Context
-Connexion OAuth (GitHub, Google). Quatre pages : Recherche (formulaire, liste d'offres triée par score, détail avec description et analyse), Alertes (recherches quotidiennes et rapports), Mon profil (import PDF/texte, éditeur de profil structuré), Paramètres (fournisseur d'IA et clé, compte). La recherche fonctionne sans IA ; les scores arrivent ensuite par lots.
+Connexion OAuth (GitHub, Google). Quatre pages : Recherche (formulaire, liste d'offres triée par score, détail avec description et analyse), Alertes (recherches quotidiennes et rapports), Mon profil (import PDF/texte, éditeur de profil structuré), Paramètres (fournisseurs d'IA classés avec bascule automatique, notifications, compte). Sur téléphone, la liste d'offres et le détail sont deux écrans successifs ; l'application s'installe (PWA) et notifie les alertes. La recherche fonctionne sans IA ; les scores arrivent ensuite par lots.
 
 ## Capabilities and Constraints
 - Interface en français, HTML/CSS/JS natifs sans étape de build, servie par PocketBase.
