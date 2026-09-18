@@ -32,7 +32,7 @@ async function draw(root) {
   root.innerHTML = `
     <div class="page-head tight"><h1>Alertes quotidiennes</h1>
       <p class="muted">Chaque matin, JobRadar relance vos recherches et ne garde que les nouvelles offres au-dessus du score choisi.</p></div>
-    ${todo.length ? `<div class="banner warn" role="status">${ic('alert')}<div><b>Configuration incomplète</b>${todo.map((t) => `<a href="${t.to}">${t.what}</a>`).join(' · ')} : les alertes ont besoin de votre IA et de votre CV.</div></div><div class="mt"></div>` : ''}
+    ${todo.length ? `<div class="banner" role="status">${ic('sparkle')}<div><b>Les alertes marchent sans IA</b>Vous recevez toutes les nouvelles offres, classées par pertinence estimée. ${todo.map((t) => `<a href="${t.to}">${t.what}</a>`).join(' · ')} pour ajouter un score de match.</div></div><div class="mt"></div>` : ''}
     <section class="psec" aria-labelledby="al-t">
       <header><div><h2 id="al-t">Mes alertes</h2></div>
         <button class="btn" id="newAlert" ${alerts.length >= MAX ? 'disabled title="3 alertes maximum"' : ''}>${ic('plus')}Nouvelle alerte</button></header>
@@ -83,13 +83,13 @@ function runBlock(r) {
   return `<section class="run">${head}<p class="muted small">${esc(r.message)} ${plural(r.new_count, 'offre')} retenue${r.new_count > 1 ? 's' : ''}.</p>
     <div class="list">${(r.jobs || []).map((j) => `<a class="rowitem" href="${/^https?:\/\//.test(j.url) ? esc(j.url) : '#'}" target="_blank" rel="noopener">
       <span class="roundel" aria-hidden="true">${esc(SITE[j.site] || '?')}</span>
-      <span><b>${esc(j.titre)}</b><span class="sub">${esc(j.entreprise)} · ${esc(j.lieu)}</span><span class="sub wrap">${esc(j.verdict || '')}</span><span class="sr-only"> Source : ${esc(SITE_NAME[j.site] || j.site)}. Ouvre l'offre dans un nouvel onglet.</span></span>
-      <span class="match t-${tier(j.match)}" role="img" aria-label="Match ${j.match} pour cent">${j.match}<small>%</small></span></a>`).join('')}</div></section>`
+      <span><b>${esc(j.titre)}</b><span class="sub">${esc(j.entreprise)} · ${esc(j.lieu)}</span>${j.salaire || j.contrat || j.teletravail ? `<span class="sub">${[j.salaire?.texte && `<b class="pay">${esc(j.salaire.texte)}</b>`, j.contrat && esc(j.contrat), j.teletravail && esc(j.teletravail)].filter(Boolean).join(' · ')}</span>` : ''}<span class="sub wrap">${esc(j.verdict || '')}</span><span class="sr-only"> Source : ${esc(SITE_NAME[j.site] || j.site)}. Ouvre l'offre dans un nouvel onglet.</span></span>
+      ${j.match != null ? `<span class="match t-${tier(j.match)}" role="img" aria-label="Match ${j.match} pour cent">${j.match}<small>%</small></span>` : j.pre != null ? `<span class="match t-none" role="img" aria-label="Pertinence estimée ${j.pre} pour cent" title="Pertinence estimée sans IA">~${j.pre}<small>%</small></span>` : ''}</a>`).join('')}</div></section>`
 }
 
 // Création / modification d'une alerte (aussi appelée depuis la page de recherche avec la recherche en cours).
 export function openAlertDialog(a, onSaved) {
-  const sites = a.sites?.length ? a.sites : ['indeed', 'hellowork']
+  const sites = a.sites?.length ? a.sites : ['indeed', 'hellowork', 'linkedin', 'glassdoor']
   const d = openDialog(`<h2>${a.id ? 'Modifier l\'alerte' : 'Nouvelle alerte'}</h2>
     <form id="alertForm" class="stack mt">
       <label class="field"><span>Nom (facultatif)</span><input name="name" maxlength="80" value="${esc(a.name || '')}"></label>
@@ -97,7 +97,7 @@ export function openAlertDialog(a, onSaved) {
         <label class="field"><span>Lieu</span><input name="location" maxlength="100" value="${esc(a.location || '')}" placeholder="Lyon, France"></label></div>
       <fieldset class="sites"><legend class="sr-only">Sites</legend>${Object.entries(SITE_NAME).map(([v, l]) => `<label class="site-chip"><input type="checkbox" name="site" value="${v}" ${sites.includes(v) ? 'checked' : ''}><span class="roundel" aria-hidden="true">${SITE[v]}</span>${l}</label>`).join('')}</fieldset>
       <div class="grid2"><label class="field"><span>Offres publiées depuis</span><select name="hours">${HOURS.map(([v, l]) => `<option value="${v}" ${String(a.hours || 72) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label class="field"><span>Score minimum : <b id="minv">${a.min_score ?? 70}</b> %</span><input type="range" name="min_score" min="40" max="95" step="5" value="${a.min_score ?? 70}"></label></div>
+        <label class="field"><span>Score minimum (avec IA) : <b id="minv">${a.min_score ?? 70}</b> %</span><input type="range" name="min_score" min="40" max="95" step="5" value="${a.min_score ?? 70}"></label></div>
       <p class="xs muted">Passage chaque matin. Les nouvelles offres sont évaluées avec votre IA (quelques centimes au plus, souvent gratuit).</p>
       <div class="actions"><button type="button" class="btn secondary" data-close="x">Annuler</button><button class="btn" type="submit">${ic('check')}Enregistrer</button></div></form>`)
   const f = $('#alertForm', d)

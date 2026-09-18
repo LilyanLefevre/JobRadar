@@ -354,3 +354,4 @@ nav.tabs a{white-space:nowrap}
 
 /* Cibles tactiles 44 px sur écrans tactiles ; compactes à la souris */
 @media (pointer:coarse){.brand{min-height:44px;min-width:44px}nav.tabs a{min-height:44px}.btn.sm,.setup{min-height:44px}.btn.icon{width:44px;min-height:44px}.avatar{width:44px;height:44px}.listbar{min-height:44px}}
+.pay{color:var(--ok);font-weight:600}

@@ -112,6 +112,22 @@ if hits:
     plain = json.loads(http_ece.decrypt(open(os.path.join(os.environ.get("E2E_TMP", "/tmp"), "push_last.bin"), "rb").read(), private_key=priv, auth_secret=auth, version="aes128gcm"))
     ok("contenu : nom de l'alerte et nombre d'offres", "Dev Lyon" in plain["title"] and "offre" in plain["body"] and "match" in plain["body"], plain)
 
+print("== prétraitement sans IA et alerte sans IA")
+s, r = call("POST", "/jr/search", {"query": "développeur", "sites": ["indeed"]}, TOK)
+j0 = next((x for x in r["jobs"] if x["titre"] == "Développeur web React"), {}) if s == 200 else {}
+ok("salaire, contrat et télétravail repérés sans IA", (j0.get("salaire") or {}).get("texte") == "45 – 55 k€ / an" and j0.get("contrat") == "CDI" and j0.get("teletravail") == "Hybride", j0)
+ok("pertinence estimée fournie", isinstance(j0.get("pre"), int) and j0["pre"] > 0, j0.get("pre"))
+call("POST", "/jr/key", {"provider": "fake", "key": "revoked"}, TOK); call("DELETE", "/jr/cache", None, TOK)
+call("POST", "/api/collections/alerts/records", {"user": UID, "name": "Sans IA", "query": "développeur", "location": "Paris", "sites": ["indeed"], "hours": 72, "min_score": 70, "active": True}, TOK)
+_, al = call("GET", "/api/collections/alerts/records", None, TOK); AID2 = next(x["id"] for x in al["items"] if x["name"] == "Sans IA")
+call("PATCH", f"/api/collections/alerts/records/{AID2}", {"queued": True}, TOK)
+for _ in range(30):
+    time.sleep(5); _, a2 = call("GET", f"/api/collections/alerts/records/{AID2}", None, TOK)
+    if a2["last_status"] in ("ok", "error", "skipped") and not a2["queued"]: break
+_, runs = call("GET", f"/api/collections/alert_runs/records?filter=alert%3D'{AID2}'", None, TOK)
+items = runs["items"][0]["jobs"] if runs["items"] else []
+ok("alerte avec IA en panne : statut ok et offres transmises", a2["last_status"] == "ok" and len(items) == 12 and all(x["match"] is None and x["pre"] is not None for x in items), (a2.get("last_status"), a2.get("last_message"), len(items)))
+
 print("== lot unique de 15")
 for p in ("fake",):
     pass

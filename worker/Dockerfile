@@ -2,7 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py providers.json .
+COPY app.py prefilter.py providers.json .
 RUN useradd --system --uid 10001 --no-create-home app
 ENV HOME=/tmp
 USER 10001
