@@ -1,0 +1,122 @@
+[
+ {
+  "id": "https://jobs.example/0",
+  "titre": "Développeur web React",
+  "entreprise": "Acme",
+  "lieu": "Lyon",
+  "site": "indeed",
+  "url": "https://jobs.example/0",
+  "date": "2026-10-01",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/1",
+  "titre": "Développeur full-stack Node.js",
+  "entreprise": "Beta",
+  "lieu": "Paris",
+  "site": "linkedin",
+  "url": "https://jobs.example/1",
+  "date": "2026-10-02",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/2",
+  "titre": "Ingénieur front-end",
+  "entreprise": "Gamma",
+  "lieu": "Lyon",
+  "site": "glassdoor",
+  "url": "https://jobs.example/2",
+  "date": "2026-10-03",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/3",
+  "titre": "Développeur TypeScript",
+  "entreprise": "Delta",
+  "lieu": "Remote",
+  "site": "indeed",
+  "url": "https://jobs.example/3",
+  "date": "2026-10-04",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/4",
+  "titre": "Développeur Python",
+  "entreprise": "Epsilon",
+  "lieu": "Lille",
+  "site": "indeed",
+  "url": "https://jobs.example/4",
+  "date": "2026-10-05",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/5",
+  "titre": "Intégrateur web",
+  "entreprise": "Zeta",
+  "lieu": "Nantes",
+  "site": "linkedin",
+  "url": "https://jobs.example/5",
+  "date": "2026-10-06",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/6",
+  "titre": "Développeur mobile",
+  "entreprise": "Eta",
+  "lieu": "Toulouse",
+  "site": "glassdoor",
+  "url": "https://jobs.example/6",
+  "date": "2026-10-07",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/7",
+  "titre": "Data engineer junior",
+  "entreprise": "Theta",
+  "lieu": "Paris",
+  "site": "indeed",
+  "url": "https://jobs.example/7",
+  "date": "2026-10-08",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/8",
+  "titre": "Développeur PHP",
+  "entreprise": "Iota",
+  "lieu": "Lyon",
+  "site": "indeed",
+  "url": "https://jobs.example/8",
+  "date": "2026-10-09",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/9",
+  "titre": "Ingénieur DevOps junior",
+  "entreprise": "Kappa",
+  "lieu": "Bordeaux",
+  "site": "linkedin",
+  "url": "https://jobs.example/9",
+  "date": "2026-10-01",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/10",
+  "titre": "Développeur Vue.js",
+  "entreprise": "Lambda",
+  "lieu": "Lyon",
+  "site": "glassdoor",
+  "url": "https://jobs.example/10",
+  "date": "2026-10-02",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ },
+ {
+  "id": "https://jobs.example/11",
+  "titre": "Tech lead front",
+  "entreprise": "Mu",
+  "lieu": "Paris",
+  "site": "indeed",
+  "url": "https://jobs.example/11",
+  "date": "2026-10-03",
+  "description": "## Missions\n\n- Développer des interfaces **React**\n- Concevoir des API REST (Node.js)\n\n## Profil\n\nVous avez 2 ans d'expérience. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. Description détaillée du poste. "
+ }
+]
