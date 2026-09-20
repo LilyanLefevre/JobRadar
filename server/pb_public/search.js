@@ -6,7 +6,7 @@ import { openAlertDialog } from './alerts.js?v=__V__'
 let getPlaces = () => [], running = false, animate = false, formOpen = true, savedScroll = 0, popBound = false
 const mobile = () => matchMedia('(max-width: 1000px)').matches
 
-// Mémoire locale (par compte) : la dernière recherche avec ses offres, et les 6 dernières recherches.
+// Historique (6 recherches) et dernière recherche : synchronisés sur le compte ; les offres de la dernière recherche restent sur l'appareil.
 const uid = () => pb.authStore.record?.id || ''
 const KEEP = ['q', 'locs', 'rad', 'n', 'hours', 'sites', 'smin', 'sreq']
 const pick = (f) => Object.fromEntries(KEEP.map((k) => [k, f[k]]))
@@ -16,10 +16,14 @@ function saveLast() {
   const jobs = Object.values(state.jobs).slice(0, 60).map((j) => ({ ...j, description: (j.description || '').slice(0, 3000), evaluating: false }))
   store.set(`jr_last_${uid()}`, JSON.stringify({ form: pick(state.form), jobs, at: Date.now() }))
 }
+const hist = () => pb.authStore.record?.searches?.hist || load('hist') || []
+function syncSearches(list, at) {
+  store.set(`jr_hist_${uid()}`, JSON.stringify(list))
+  pb.collection('users').update(uid(), { searches: { hist: list, last: pick(state.form), at } }, { requestKey: null }).catch(() => {}) // la synchro est un bonus : hors ligne, l'appareil garde sa copie
+}
 function pushHistory() {
   const key = (h) => histLabel(h).toLowerCase()
-  const list = [pick(state.form), ...(load('hist') || []).filter((h) => key(h) !== key(state.form))].slice(0, 6)
-  store.set(`jr_hist_${uid()}`, JSON.stringify(list))
+  syncSearches([pick(state.form), ...hist().filter((h) => key(h) !== key(state.form))].slice(0, 6), Date.now())
 }
 const ago = (t) => { const m = Math.round((Date.now() - t) / 60000); return m < 2 ? "à l'instant" : m < 60 ? `il y a ${m} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j` }
 let restored = false, rootEl = null
@@ -28,8 +32,11 @@ export function render(root) {
   rootEl = root
   if (!restored) { // première ouverture de la page : on reprend la dernière recherche
     restored = true
-    const last = load('last')
-    if (last?.form && !state.form.q) { Object.assign(state.form, last.form); state.lastAt = last.at; (last.jobs || []).forEach((j) => (state.jobs[j.id] = j)); formOpen = false }
+    const last = load('last'), sv = pb.authStore.record?.searches
+    if (!state.form.q) {
+      if (sv?.last && sv.at > (last?.at || 0)) Object.assign(state.form, sv.last) // une recherche plus récente vient d'un autre appareil : critères seulement
+      else if (last?.form) { Object.assign(state.form, last.form); state.lastAt = last.at; (last.jobs || []).forEach((j) => (state.jobs[j.id] = j)); formOpen = false }
+    }
   }
   const r = profile()?.recherche || {}
   const f = state.form
@@ -40,7 +47,7 @@ export function render(root) {
     <div class="page-head tight"><h1>Recherche d'offres</h1></div>
     ${todo.length ? `<div class="banner warn" role="status">${ic('alert')}<div><b>Scores désactivés</b>${todo.map((t) => `<a href="${t.to}">${t.what}</a>`).join(' · ')} pour activer les évaluations. La recherche fonctionne déjà sans.</div></div><div class="mt"></div>` : ''}
     <div class="searchsum" id="searchsum" hidden><span id="sumtxt"></span><button type="button" class="btn secondary sm" id="editSearch">${ic('pencil')}Modifier</button></div>
-    ${(load('hist') || []).length ? `<div class="recent" role="group" aria-label="Recherches récentes"><span class="muted small">Récentes</span>${(load('hist') || []).map((h, i) => `<button type="button" class="btn secondary sm" data-hist="${i}">${esc(histLabel(h))}</button>`).join('')}<button type="button" class="btn ghost sm" id="clearHist">Effacer</button></div>` : ''}
+    ${hist().length ? `<div class="recent" role="group" aria-label="Recherches récentes"><span class="muted small">Récentes</span>${hist().map((h, i) => `<button type="button" class="btn secondary sm" data-hist="${i}">${esc(histLabel(h))}</button>`).join('')}<button type="button" class="btn ghost sm" id="clearHist">Effacer</button></div>` : ''}
     <form class="searchbar" id="form">
       <label class="field"><span>Poste</span><input id="q" value="${esc(f.q)}" placeholder="Développeur web" required></label>
       ${placesField('loc')}
@@ -57,8 +64,8 @@ export function render(root) {
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="results"><div class="list" id="list"></div><div class="detail" id="detail"></div></div>`
-  $$('[data-hist]', root).forEach((b) => (b.onclick = () => { Object.assign(state.form, load('hist')[+b.dataset.hist]); render(root); launch() }))
-  $('#clearHist')?.addEventListener('click', () => { store.set(`jr_hist_${uid()}`, '[]'); render(root) })
+  $$('[data-hist]', root).forEach((b) => (b.onclick = () => { Object.assign(state.form, hist()[+b.dataset.hist]); render(root); launch() }))
+  $('#clearHist')?.addEventListener('click', () => { syncSearches([], Date.now()); render(root) })
   if (state.lastAt && Object.keys(state.jobs).length) $('#status').textContent = `Dernière recherche ${ago(state.lastAt)} : ${plural(Object.keys(state.jobs).length, 'offre')}. Relancez-la pour actualiser.`
   getPlaces = bindPlaces($('#form'), 'loc', f.locs)
   $('#form').onsubmit = (e) => { e.preventDefault(); launch() }
