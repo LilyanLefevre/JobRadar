@@ -67,7 +67,7 @@ function alertRow(a, run) {
   return `<article class="alertrow" data-id="${a.id}">
     <label class="switch"><input type="checkbox" role="switch" data-toggle ${a.active ? 'checked' : ''}><span class="track" aria-hidden="true"></span><span class="sr-only">Alerte active</span></label>
     <div class="grow"><b>${esc(a.name || a.query)}</b>
-      <span class="sub">${esc(a.query)} · ${esc(a.location || 'France')} · score ≥ ${a.min_score} % · ${(a.sites || []).map((s) => esc(SITE_NAME[s] || s)).join(', ')}</span>
+      <span class="sub">${esc(a.query)} · ${esc(a.location || 'France')} · score ≥ ${a.min_score} %${a.salary_min ? ` · ≥ ${a.salary_min / 1000} k€` : ''} · ${(a.sites || []).map((s) => esc(SITE_NAME[s] || s)).join(', ')}</span>
       <span class="sub status">${status}</span></div>
     <div class="row tools"><button class="btn secondary sm" data-run ${busy ? 'disabled' : ''}>${ic('clock')}Lancer maintenant</button>
       <button class="btn ghost icon" data-edit aria-label="Modifier l'alerte">${ic('pencil')}</button>
@@ -98,13 +98,15 @@ export function openAlertDialog(a, onSaved) {
       <fieldset class="sites"><legend class="sr-only">Sites</legend>${Object.entries(SITE_NAME).map(([v, l]) => `<label class="site-chip"><input type="checkbox" name="site" value="${v}" ${sites.includes(v) ? 'checked' : ''}><span class="roundel" aria-hidden="true">${SITE[v]}</span>${l}</label>`).join('')}</fieldset>
       <div class="grid2"><label class="field"><span>Offres publiées depuis</span><select name="hours">${HOURS.map(([v, l]) => `<option value="${v}" ${String(a.hours || 72) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label class="field"><span>Score minimum (avec IA) : <b id="minv">${a.min_score ?? 70}</b> %</span><input type="range" name="min_score" min="40" max="95" step="5" value="${a.min_score ?? 70}"></label></div>
+      <div class="opts"><label class="field sal"><span>Salaire annuel brut minimum (€)</span><input name="salary_min" type="number" min="0" max="1000000" step="1000" inputmode="numeric" value="${a.salary_min || ''}" placeholder="Aucun"></label>
+        <label class="check"><input type="checkbox" name="salary_required" ${a.salary_required ? 'checked' : ''}>Salaire indiqué uniquement</label></div>
       <p class="xs muted">Passage chaque matin. Les nouvelles offres sont évaluées avec votre IA (quelques centimes au plus, souvent gratuit).</p>
       <div class="actions"><button type="button" class="btn secondary" data-close="x">Annuler</button><button class="btn" type="submit">${ic('check')}Enregistrer</button></div></form>`)
   const f = $('#alertForm', d)
   f.min_score.oninput = () => ($('#minv', d).textContent = f.min_score.value)
   f.onsubmit = async (e) => {
     e.preventDefault()
-    const body = { name: f.name.value.trim(), query: f.query.value.trim(), location: f.location.value.trim(), sites: $$('[name=site]:checked', f).map((i) => i.value), hours: +f.hours.value, min_score: +f.min_score.value }
+    const body = { name: f.name.value.trim(), query: f.query.value.trim(), location: f.location.value.trim(), sites: $$('[name=site]:checked', f).map((i) => i.value), hours: +f.hours.value, min_score: +f.min_score.value, salary_min: +f.salary_min.value || 0, salary_required: f.salary_required.checked }
     if (!body.query) return toast('Indiquez un poste.', 'err')
     if (!body.sites.length) return toast('Choisissez au moins un site.', 'err')
     try {

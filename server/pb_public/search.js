@@ -24,6 +24,10 @@ export function render(root) {
       <button class="btn" id="go" type="submit">${ic('search')}Rechercher</button>
       <fieldset class="sites"><legend class="sr-only">Sites</legend>
         ${Object.entries(SITE_NAME).map(([v, l]) => `<label class="site-chip"><input type="checkbox" class="site" value="${v}" ${f.sites.includes(v) ? 'checked' : ''}><span class="roundel" aria-hidden="true">${SITE[v]}</span>${l}</label>`).join('')}</fieldset>
+      <div class="opts">
+        <label class="field sal"><span>Salaire annuel brut minimum (€)</span><input id="smin" type="number" min="0" max="1000000" step="1000" inputmode="numeric" value="${esc(f.smin)}" placeholder="Aucun"></label>
+        <label class="check"><input type="checkbox" id="sreq" ${f.sreq ? 'checked' : ''}>Salaire indiqué uniquement</label>
+        ${canEvaluate() ? `<label class="check"><input type="checkbox" id="ai" ${f.ai ? 'checked' : ''}>Évaluer avec l'IA</label>` : ''}</div>
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="results"><div class="list" id="list"></div><div class="detail" id="detail"></div></div>`
@@ -59,7 +63,7 @@ function closeDetail(viaButton = true) {
 }
 
 function readForm() {
-  Object.assign(state.form, { q: $('#q').value.trim(), loc: $('#loc').value.trim(), n: $('#n').value, hours: $('#hours').value, sites: $$('.site:checked').map((e) => e.value) })
+  Object.assign(state.form, { q: $('#q').value.trim(), loc: $('#loc').value.trim(), n: $('#n').value, hours: $('#hours').value, sites: $$('.site:checked').map((e) => e.value), smin: $('#smin').value, sreq: $('#sreq').checked, ai: $('#ai') ? $('#ai').checked : state.form.ai })
 }
 
 async function launch() {
@@ -91,12 +95,12 @@ async function runSearch() {
   $('#status').innerHTML = '<span class="spin" aria-hidden="true"></span> Recherche en cours (environ 30 secondes)…'
   try {
     const f = state.form
-    const res = await call('search', 'POST', { query: f.q, location: f.loc, n: f.n, hours: f.hours, sites: f.sites })
+    const res = await call('search', 'POST', { query: f.q, location: f.loc, n: f.n, hours: f.hours, sites: f.sites, salary_min: +f.smin || 0, salary_required: f.sreq })
     state.jobs = {}; state.selected = null; animate = true; formOpen = false
     res.jobs.forEach((j) => (state.jobs[j.id] = j))
     paint(); syncMobile()
     $('#status').textContent = `${plural(res.jobs.length, 'offre')} ${res.jobs.length > 1 ? 'trouvées' : 'trouvée'}.`
-    if (canEvaluate() && res.jobs.length) await evaluateAll(res.jobs)
+    if (canEvaluate() && f.ai && res.jobs.length) await evaluateAll(res.jobs)
   } catch (e) {
     $('#status').textContent = ''; $('#list').innerHTML = `<div class="banner err" role="alert">${ic('alert')}<div><b>Recherche impossible</b>${esc(e.message)}</div></div>`
   }
@@ -185,7 +189,7 @@ function paint() {
   if (animate) { animate = false; rows.forEach((b, i) => { b.style.setProperty('--i', Math.min(i, 10)); b.classList.add('enter') }) }
   rows.forEach((b) => (b.onclick = () => openDetail(b.dataset.id)))
   $('#evalAll')?.addEventListener('click', () => evaluateAll(jobs))
-  $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.loc, sites: state.form.sites, hours: 72, min_score: 70 }))
+  $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.loc, sites: state.form.sites, hours: 72, min_score: 70, salary_min: +state.form.smin || 0, salary_required: state.form.sreq }))
   detail(state.jobs[state.selected])
 }
 

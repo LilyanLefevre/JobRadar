@@ -117,6 +117,9 @@ s, r = call("POST", "/jr/search", {"query": "développeur", "sites": ["indeed"]}
 j0 = next((x for x in r["jobs"] if x["titre"] == "Développeur web React"), {}) if s == 200 else {}
 ok("salaire, contrat et télétravail repérés sans IA", (j0.get("salaire") or {}).get("texte") == "45 – 55 k€ / an" and j0.get("contrat") == "CDI" and j0.get("teletravail") == "Hybride", j0)
 ok("pertinence estimée fournie", isinstance(j0.get("pre"), int) and j0["pre"] > 0, j0.get("pre"))
+def titres(**q): return sorted(x["titre"] for x in call("POST", "/jr/search", {"query": "développeur", "sites": ["indeed"], **q}, TOK)[1]["jobs"])
+ok("critère de salaire minimum : écarte les offres sous le seuil, garde celles sans salaire", "Développeur full-stack Node.js" not in titres(salary_min=40000) and len(titres(salary_min=40000)) == 11)
+ok("salaire indiqué uniquement", titres(salary_required=True) == ["Développeur full-stack Node.js", "Développeur web React"] and titres(salary_min=40000, salary_required=True) == ["Développeur web React"])
 call("POST", "/jr/key", {"provider": "fake", "key": "revoked"}, TOK); call("DELETE", "/jr/cache", None, TOK)
 call("POST", "/api/collections/alerts/records", {"user": UID, "name": "Sans IA", "query": "développeur", "location": "Paris", "sites": ["indeed"], "hours": 72, "min_score": 70, "active": True}, TOK)
 _, al = call("GET", "/api/collections/alerts/records", None, TOK); AID2 = next(x["id"] for x in al["items"] if x["name"] == "Sans IA")

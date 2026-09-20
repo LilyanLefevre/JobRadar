@@ -310,9 +310,11 @@ def search():
             return jsonify(error=f"Limite de {SEARCHES_PER_DAY} recherches par jour atteinte."), 429
         _searches[p["user"]] = (today, n)
 
+    smin, sreq = _int(p.get("salary_min"), 0, 0, 1000000), bool(p.get("salary_required"))
     kw = [_s(k, 60) for k in (p.get("keywords") or [])[:60] if isinstance(k, str)]
     if JOBS_FIXTURE:  # tests uniquement : offres fixes au lieu du scraping
-        return jsonify(jobs=[{**j, **prefilter.enrich({"title": j["titre"], "description": j["description"]}, p["query"], kw)} for j in json.load(open(JOBS_FIXTURE))])
+        jobs = [{**j, **prefilter.enrich({"title": j["titre"], "description": j["description"]}, p["query"], kw)} for j in json.load(open(JOBS_FIXTURE))]
+        return jsonify(jobs=[j for j in jobs if prefilter.keep_salary(j, smin, sreq)])
     sites = [s for s in p.get("sites") or ["indeed"] if s in SITES] or ["indeed"]
     with _scrape_slots:
         df = scrape_jobs(
@@ -331,7 +333,7 @@ def search():
          **prefilter.enrich({**r._asdict(), "title": r.title}, p["query"], kw)}
         for r in df.itertuples()
     ]
-    return jsonify(jobs=jobs)
+    return jsonify(jobs=[j for j in jobs if prefilter.keep_salary(j, smin, sreq)])
 
 
 def _json_object(text):
