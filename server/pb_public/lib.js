@@ -80,11 +80,11 @@ export function bindAvatars(root = document) {
 // Champ « lieux » : jusqu'à 3 pastilles (Entrée ou « ; » valide un lieu), un rayon en km autour de chacun.
 export const RADII = [10, 25, 50, 100]
 export const splitPlaces = (s) => String(s || '').split(';').map((x) => x.trim()).filter(Boolean).slice(0, 3)
-export const placesField = (id) => `<div class="field"><label for="${id}">Lieux (3 maximum)</label><div class="tagin" id="${id}-box"><input id="${id}" autocomplete="off" placeholder="Lyon, France"></div></div>`
+export const placesField = (id) => `<div class="field"><label for="${id}">Lieux (3 maximum)</label><div class="tagin" id="${id}-box"><input id="${id}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-list" autocomplete="off" placeholder="Lyon, 69, Nantes…"></div><ul class="sugg" id="${id}-list" role="listbox" hidden></ul></div>`
 export const radiusField = (id, value) => `<label class="field"><span>Rayon autour du lieu</span><select id="${id}">${RADII.map((r) => `<option value="${r}" ${String(value || 25) === String(r) ? 'selected' : ''}>${r} km</option>`).join('')}</select></label>`
 export function bindPlaces(root, id, initial) {
-  const box = $(`#${id}-box`, root), input = $(`#${id}`, root)
-  let list = [...initial].slice(0, 3)
+  const box = $(`#${id}-box`, root), input = $(`#${id}`, root), menu = $(`#${id}-list`, root)
+  let list = [...initial].slice(0, 3), options = [], active = -1, timer, seq = 0
   const draw = () => {
     $$('.tagc', box).forEach((c) => c.remove())
     list.forEach((p, i) => {
@@ -94,14 +94,31 @@ export function bindPlaces(root, id, initial) {
       b.onclick = () => { list.splice(i, 1); draw(); input.focus() }
       c.append(b); box.insertBefore(c, input)
     })
-    input.disabled = list.length >= 3; input.placeholder = list.length ? '' : 'Lyon, France'
+    input.disabled = list.length >= 3; input.placeholder = list.length ? '' : 'Lyon, 69, Nantes…'
   }
-  const commit = () => { const v = input.value.replace(/;/g, ' ').trim(); input.value = ''; if (v && list.length < 3 && !list.includes(v)) { list.push(v); draw() } }
+  const close = () => { menu.hidden = true; options = []; active = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant') }
+  const add = (v) => { v = v.replace(/;/g, ' ').trim(); input.value = ''; close(); if (v && list.length < 3 && !list.includes(v)) { list.push(v); draw() } }
+  const mark = (i) => { active = i; $$('li', menu).forEach((li, n) => li.setAttribute('aria-selected', String(n === i))); if (i >= 0) input.setAttribute('aria-activedescendant', `${id}-o${i}`); else input.removeAttribute('aria-activedescendant') }
+  const show = (found) => {
+    options = found
+    menu.innerHTML = found.map((o, i) => `<li id="${id}-o${i}" role="option" aria-selected="false" data-i="${i}"><b>${esc(o.label)}</b> <span>${esc(o.detail)}</span></li>`).join('')
+    menu.hidden = !found.length; input.setAttribute('aria-expanded', String(!!found.length)); active = -1
+    $$('li', menu).forEach((li) => (li.onmousedown = (e) => { e.preventDefault(); add(options[+li.dataset.i].value) }))
+  }
+  input.addEventListener('input', () => {
+    clearTimeout(timer); const q = input.value.trim(), n = ++seq
+    if (q.length < 2) return close()
+    timer = setTimeout(async () => { try { const r = await call('places', 'POST', { q }); if (n === seq && input.value.trim() === q) show(r.places || []) } catch { close() } }, 220)
+  })
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); commit() }
-    else if (e.key === ';') { e.preventDefault(); commit() }
+    if (e.key === 'ArrowDown' && options.length) { e.preventDefault(); mark((active + 1) % options.length) }
+    else if (e.key === 'ArrowUp' && options.length) { e.preventDefault(); mark((active - 1 + options.length) % options.length) }
+    else if (e.key === 'Escape' && !menu.hidden) { e.preventDefault(); e.stopPropagation(); close() }
+    else if (e.key === 'Enter' && (active >= 0 || input.value.trim())) { e.preventDefault(); add(active >= 0 ? options[active].value : input.value) }
+    else if (e.key === ';') { e.preventDefault(); add(input.value) }
     else if (e.key === 'Backspace' && !input.value && list.length) { list.pop(); draw() }
   })
+  input.addEventListener('blur', () => setTimeout(close, 120))
   draw()
-  return () => { commit(); return [...list] }
+  return () => { const v = input.value.trim(); if (v) add(v); return [...list] }
 }

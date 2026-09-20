@@ -32,6 +32,14 @@ ok('IA cochée : l\'évaluation a lieu', calls());
 // Plusieurs lieux (pastilles) et rayon : la requête envoie « A;B » et le rayon.
 await p.goto(`${BASE}/#/search`); await p.waitForSelector('#q');
 for (const c of await p.locator('.tagc button').all()) await c.click();
+await p.fill('#loc', 'lyo'); await p.waitForSelector('#loc-list li');
+await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-sugg.png', clip: { x: 0, y: 100, width: 1280, height: 400 } });
+ok('suggestions de communes affichées', (await p.locator('#loc-list li').count()) === 2 && /Lyon\s+Rhône/.test(await p.locator('#loc-list li').first().innerText()), JSON.stringify(await p.locator('#loc-list li').allInnerTexts()));
+await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter');
+ok('suggestion choisie au clavier : pastille « Lyon, Rhône »', (await p.locator('.tagc').allInnerTexts()).join().includes('Lyon, Rhône'));
+await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-one.png', clip: { x: 0, y: 100, width: 1280, height: 400 } });
+ok('un lieu tient sur une ligne', (await p.locator('#loc-box').boundingBox()).height < 60, JSON.stringify(await p.locator('#loc-box').boundingBox()));
+await p.click('.tagc button');
 await p.fill('#loc', 'Lyon, France'); await p.press('#loc', 'Enter');
 await p.fill('#loc', 'Paris'); await p.press('#loc', ';');
 await p.fill('#loc', 'Nantes'); // validé à l'envoi

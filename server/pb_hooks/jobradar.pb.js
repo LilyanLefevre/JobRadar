@@ -38,6 +38,12 @@ onRecordAuthWithOAuth2Request((e) => {
   e.next()
 }, "users")
 
+routerAdd("POST", "/jr/places", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const r = lib.worker("/places", { q: String(e.requestInfo().body.q || "") }, 8)
+  return e.json(200, r.statusCode === 200 ? r.json : { places: [] })
+}, $apis.requireAuth("users"))
+
 routerAdd("GET", "/jr/providers", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const r = lib.worker("/providers", null, 20, "GET")

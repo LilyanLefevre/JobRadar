@@ -114,7 +114,7 @@ main{max-width:1120px;margin:0 auto;padding:24px 24px 56px}
 .banner.warn .ic{color:var(--warn)}.banner.err .ic{color:var(--danger)}
 
 /* Recherche */
-.searchbar{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.4fr) minmax(0,1fr) 140px auto;gap:12px 16px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow)}
+.searchbar{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,2fr) minmax(0,1fr) 120px auto;gap:12px 16px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow)}
 .sites{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;border:0;padding:0;margin:0}
 .site-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 8px;border:1.5px solid var(--line-strong);border-radius:999px;background:var(--panel);cursor:pointer;font-weight:500}
 .site-chip input{position:absolute;opacity:0;width:1px;height:1px}
@@ -358,7 +358,7 @@ nav.tabs a{white-space:nowrap}
 .opts{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:end;gap:12px 16px}.opts .sal{width:min(100%,260px)}
 .tagin{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:44px;padding:0 8px;background:var(--panel);border:1.5px solid var(--line-strong);border-radius:var(--r)}
 .tagin:focus-within{outline:3px solid var(--focus);border-color:var(--focus)}
-.tagin input{flex:1;width:auto;min-width:9ch;min-height:44px;padding:0 4px;border:0;background:transparent}
+.tagin input{flex:1;width:auto;min-width:5ch;min-height:44px;padding:0 4px;border:0;background:transparent}
 .tagin input:focus-visible{outline:0}
 .tagc{display:inline-flex;align-items:center;gap:2px;padding-left:12px;border-radius:999px;background:var(--blue-weak);color:var(--ink);font-weight:500}
 .tagc button{border:0;background:none;color:inherit;font:700 18px/1 var(--sans);width:32px;min-height:32px;cursor:pointer;border-radius:999px}
@@ -366,3 +366,8 @@ nav.tabs a{white-space:nowrap}
 .rowitem b.pay{display:inline}
 .tagc{min-height:32px}
 @media (pointer:coarse){.tagc{min-height:44px}}
+.field:has(.tagin){position:relative}
+.sugg{position:absolute;z-index:20;top:100%;left:0;right:0;margin:4px 0 0;padding:4px;list-style:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-pop)}
+.sugg li{display:flex;gap:8px;align-items:baseline;min-height:44px;padding:0 12px;align-items:center;border-radius:var(--r);cursor:pointer}
+.sugg li span{color:var(--muted);font-size:14px}
+.sugg li:hover,.sugg li[aria-selected=true]{background:var(--blue-weak)}
