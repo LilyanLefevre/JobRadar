@@ -75,7 +75,7 @@ ok('persisté : catégorie, poste, compétences, CDD', (await p.inputValue('[dat
 
 // recherche avec IA : lots, panneaux de match
 await p.click('nav [data-nav=search]'); await p.waitForSelector('#q');
-ok('recherche préremplie depuis le profil', (await p.inputValue('#q')) !== '' && (await p.inputValue('#loc')) === 'Lyon');
+ok('recherche préremplie depuis le profil', (await p.inputValue('#q')) !== '' && (await p.locator('.tagc').allInnerTexts()).join().includes('Lyon'));
 await p.fill('#n', '3'); if (await checked('linkedin')) await chip('LinkedIn').click();
 await p.click('#go'); await p.waitForSelector('.match.t-strong, .match.t-mid', { timeout: 120000 });
 ok('pas de popup quand tout est configuré', !(await p.locator('#dialog[open]').count()));

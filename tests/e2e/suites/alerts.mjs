@@ -21,7 +21,7 @@ await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/al-empty.png' });
 
 // créer une alerte
 await p.click('#newAlert'); await p.waitForSelector('#alertForm');
-await p.fill('#alertForm [name=query]', 'développeur'); await p.fill('#alertForm [name=location]', 'Lyon'); await p.fill('#alertForm [name=name]', 'Dev à Lyon');
+await p.fill('#alertForm [name=query]', 'développeur'); await p.fill('#al-loc', 'Lyon'); await p.fill('#alertForm [name=name]', 'Dev à Lyon');
 await p.locator('#alertForm label.site-chip', { hasText: 'Indeed' }).click();
 await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/al-dialog.png' });
 await p.click('#alertForm button[type=submit]'); await p.waitForSelector('.alertrow');
@@ -48,7 +48,7 @@ await p.waitForSelector('#toast div'); ok('alerte mise en pause', (await txt('#t
 await p.click('nav [data-nav=search]'); await p.waitForSelector('#q'); await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await p.fill('#n', '2');
 await p.click('#go'); await p.waitForSelector('.rowitem', { timeout: 120000 });
 await p.click('#mkAlert'); await p.waitForSelector('#alertForm');
-ok('création depuis la recherche : champs préremplis', (await p.inputValue('#alertForm [name=query]')) === 'développeur web' && (await p.inputValue('#alertForm [name=location]')) === 'Lyon');
+ok('création depuis la recherche : champs préremplis', (await p.inputValue('#alertForm [name=query]')) === 'développeur web' && (await p.locator('#alertForm .tagc').allInnerTexts()).join().includes('Lyon'));
 await p.click('#alertForm button[type=submit]'); await p.waitForSelector('#toast div');
 
 // plafond

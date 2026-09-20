@@ -1,16 +1,16 @@
-import { $, $$, esc, call, pb, state, providerLabel, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store, setupTodo, SITE, SITE_NAME, tier } from './lib.js?v=__V__'
+import { $, $$, esc, placesField, radiusField, bindPlaces, splitPlaces, call, pb, state, providerLabel, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store, setupTodo, SITE, SITE_NAME, tier } from './lib.js?v=__V__'
 import { renderMarkdown } from './md.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import { openAlertDialog } from './alerts.js?v=__V__'
 
-let running = false, animate = false, formOpen = true, savedScroll = 0, popBound = false
+let getPlaces = () => [], running = false, animate = false, formOpen = true, savedScroll = 0, popBound = false
 const mobile = () => matchMedia('(max-width: 1000px)').matches
 
 export function render(root) {
   const r = profile()?.recherche || {}
   const f = state.form
   if (!f.q) f.q = r.metiers?.[0] || profile()?.identite?.titre || ''
-  if (!f.loc) f.loc = r.lieux?.[0] || profile()?.identite?.lieu || ''
+  if (!f.locs.length) f.locs = (r.lieux?.length ? r.lieux : [profile()?.identite?.lieu].filter(Boolean)).slice(0, 3)
   const todo = setupTodo()
   root.innerHTML = `
     <div class="page-head tight"><h1>Recherche d'offres</h1></div>
@@ -18,19 +18,21 @@ export function render(root) {
     <div class="searchsum" id="searchsum" hidden><span id="sumtxt"></span><button type="button" class="btn secondary sm" id="editSearch">${ic('pencil')}Modifier</button></div>
     <form class="searchbar" id="form">
       <label class="field"><span>Poste</span><input id="q" value="${esc(f.q)}" placeholder="Développeur web" required></label>
-      <label class="field"><span>Lieu</span><input id="loc" value="${esc(f.loc)}" placeholder="Lyon, France"></label>
+      ${placesField('loc')}
       <label class="field"><span>Publiées depuis</span><select id="hours">${[['24', '24 heures'], ['72', '3 jours'], ['168', '7 jours'], ['720', '30 jours']].map(([v, l]) => `<option value="${v}" ${f.hours === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       <label class="field"><span>Offres par site</span><input id="n" type="number" min="1" max="20" value="${esc(f.n)}"></label>
       <button class="btn" id="go" type="submit">${ic('search')}Rechercher</button>
       <fieldset class="sites"><legend class="sr-only">Sites</legend>
         ${Object.entries(SITE_NAME).map(([v, l]) => `<label class="site-chip"><input type="checkbox" class="site" value="${v}" ${f.sites.includes(v) ? 'checked' : ''}><span class="roundel" aria-hidden="true">${SITE[v]}</span>${l}</label>`).join('')}</fieldset>
       <div class="opts">
+        ${radiusField('rad', f.rad)}
         <label class="field sal"><span>Salaire annuel brut minimum (€)</span><input id="smin" type="number" min="0" max="1000000" step="1000" inputmode="numeric" value="${esc(f.smin)}" placeholder="Aucun"></label>
         <label class="check"><input type="checkbox" id="sreq" ${f.sreq ? 'checked' : ''}>Salaire indiqué uniquement</label>
         ${canEvaluate() ? `<label class="check"><input type="checkbox" id="ai" ${f.ai ? 'checked' : ''}>Évaluer avec l'IA</label>` : ''}</div>
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="results"><div class="list" id="list"></div><div class="detail" id="detail"></div></div>`
+  getPlaces = bindPlaces($('#form'), 'loc', f.locs)
   $('#form').onsubmit = (e) => { e.preventDefault(); launch() }
   $('#editSearch').onclick = () => { formOpen = true; syncMobile(); window.scrollTo(0, 0); $('#q').focus() }
   if (!popBound) { popBound = true; addEventListener('popstate', () => { if (state.selected && mobile()) closeDetail(false) }); matchMedia('(max-width: 1000px)').addEventListener('change', syncMobile) }
@@ -44,7 +46,7 @@ function syncMobile() {
   const collapse = mobile() && Object.keys(state.jobs).length > 0 && !formOpen
   form.classList.toggle('collapsed', collapse)
   $('#searchsum').hidden = !collapse
-  $('#sumtxt').innerHTML = `<b>${esc(state.form.q)}</b> · ${esc(state.form.loc || 'France')} · ${plural(state.form.sites.length, 'site')}`
+  $('#sumtxt').innerHTML = `<b>${esc(state.form.q)}</b> · ${esc(state.form.locs.join(' · ') || 'France')}${state.form.locs.length ? ` (${state.form.rad} km)` : ''} · ${plural(state.form.sites.length, 'site')}`
   const open = mobile() && !!state.selected
   $('.results')?.classList.toggle('detail-open', open)
   $('#view').classList.toggle('mobile-detail', open)
@@ -63,7 +65,7 @@ function closeDetail(viaButton = true) {
 }
 
 function readForm() {
-  Object.assign(state.form, { q: $('#q').value.trim(), loc: $('#loc').value.trim(), n: $('#n').value, hours: $('#hours').value, sites: $$('.site:checked').map((e) => e.value), smin: $('#smin').value, sreq: $('#sreq').checked, ai: $('#ai') ? $('#ai').checked : state.form.ai })
+  Object.assign(state.form, { q: $('#q').value.trim(), locs: getPlaces(), rad: $('#rad').value, n: $('#n').value, hours: $('#hours').value, sites: $$('.site:checked').map((e) => e.value), smin: $('#smin').value, sreq: $('#sreq').checked, ai: $('#ai') ? $('#ai').checked : state.form.ai })
 }
 
 async function launch() {
@@ -95,7 +97,7 @@ async function runSearch() {
   $('#status').innerHTML = '<span class="spin" aria-hidden="true"></span> Recherche en cours (environ 30 secondes)…'
   try {
     const f = state.form
-    const res = await call('search', 'POST', { query: f.q, location: f.loc, n: f.n, hours: f.hours, sites: f.sites, salary_min: +f.smin || 0, salary_required: f.sreq })
+    const res = await call('search', 'POST', { query: f.q, location: f.locs.join(';'), radius: +f.rad, n: f.n, hours: f.hours, sites: f.sites, salary_min: +f.smin || 0, salary_required: f.sreq })
     state.jobs = {}; state.selected = null; animate = true; formOpen = false
     res.jobs.forEach((j) => (state.jobs[j.id] = j))
     paint(); syncMobile()
@@ -189,7 +191,7 @@ function paint() {
   if (animate) { animate = false; rows.forEach((b, i) => { b.style.setProperty('--i', Math.min(i, 10)); b.classList.add('enter') }) }
   rows.forEach((b) => (b.onclick = () => openDetail(b.dataset.id)))
   $('#evalAll')?.addEventListener('click', () => evaluateAll(jobs))
-  $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.loc, sites: state.form.sites, hours: 72, min_score: 70, salary_min: +state.form.smin || 0, salary_required: state.form.sreq }))
+  $('#mkAlert')?.addEventListener('click', () => openAlertDialog({ query: state.form.q, location: state.form.locs.join('; '), radius: +state.form.rad, sites: state.form.sites, hours: 72, min_score: 70, salary_min: +state.form.smin || 0, salary_required: state.form.sreq }))
   detail(state.jobs[state.selected])
 }
 

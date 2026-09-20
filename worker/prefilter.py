@@ -131,3 +131,9 @@ def keep_salary(job, minimum, required):
     if not s:
         return not required
     return not minimum or s["max"] * ANNUEL[s["periode"]] >= minimum
+
+
+def places(v, limit=3):
+    """Lieux de recherche : liste ou texte séparé par « ; » (les virgules font partie d'un lieu : « Lyon, France »)."""
+    items = v if isinstance(v, list) else str(v or "").split(";")
+    return [str(x).strip()[:100] for x in items if str(x).strip()][:limit]

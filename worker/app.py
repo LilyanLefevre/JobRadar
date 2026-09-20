@@ -22,6 +22,7 @@ from pywebpush import WebPushException, webpush
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from urllib.parse import urlparse
 from pydantic import BaseModel
+import pandas as pd
 import prefilter
 from pypdf import PdfReader
 
@@ -316,17 +317,22 @@ def search():
         jobs = [{**j, **prefilter.enrich({"title": j["titre"], "description": j["description"]}, p["query"], kw)} for j in json.load(open(JOBS_FIXTURE))]
         return jsonify(jobs=[j for j in jobs if prefilter.keep_salary(j, smin, sreq)])
     sites = [s for s in p.get("sites") or ["indeed"] if s in SITES] or ["indeed"]
-    with _scrape_slots:
-        df = scrape_jobs(
-            site_name=sites,
-            search_term=_s(p["query"], 200),
-            location=_s(p.get("location"), 100) or "France",
-            results_wanted=_int(p.get("n"), 10, 1, 20),
-            hours_old=_int(p.get("hours"), 168, 0, 720) or None,
-            country_indeed="France",
-            linkedin_fetch_description=True,
-        )
-    df = df.fillna("").drop_duplicates(subset=["job_url"])
+    places = prefilter.places(p.get("location"))
+    miles = max(1, round(_int(p.get("radius"), 25, 0, 200) / 1.609)) if places else 50  # JobSpy compte en miles
+    frames = []
+    for place in places or ["France"]:
+        with _scrape_slots:
+            frames.append(scrape_jobs(
+                site_name=sites,
+                search_term=_s(p["query"], 200),
+                location=place,
+                distance=miles,
+                results_wanted=_int(p.get("n"), 10, 1, 20),
+                hours_old=_int(p.get("hours"), 168, 0, 720) or None,
+                country_indeed="France",
+                linkedin_fetch_description=True,
+            ))
+    df = pd.concat(frames, ignore_index=True).fillna("").drop_duplicates(subset=["job_url"])
     jobs = [
         {"id": r.job_url, "titre": r.title, "entreprise": r.company, "lieu": r.location,
          "site": r.site, "url": r.job_url, "date": str(r.date_posted), "description": r.description,
