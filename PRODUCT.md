@@ -37,6 +37,8 @@ Aucun témoignage, client ou chiffre réel : ne rien inventer. Les offres affich
 3. Utile sans configuration : la recherche marche sans IA ; la configuration est suggérée, jamais imposée.
 4. Transparence sur les données : l'utilisateur sait ce qui part chez son fournisseur d'IA.
 5. Un compte et une navigation conformes aux usages des applications web modernes.
+6. La recherche est le cœur, l'IA un plus : salaire, contrat, télétravail et pertinence estimée sont calculés sans IA, et les alertes continuent sans clé, quota épuisé ou panne.
+7. Les filtres de base restent visibles, les autres se replient (« Plus de filtres ») avec le compte des filtres actifs ; la page reprend la dernière recherche et l'historique suit le compte.
 
 ## Accessibility & Inclusion
 WCAG 2.2 AA : clavier complet, focus visible, contrastes, cibles tactiles de 44 px, mouvement réduit respecté, français.
