@@ -12,7 +12,7 @@ export const state = {
   key: { has_key: false, provider: '' },
   jobs: {},
   selected: null,
-  form: { q: '', locs: [], rad: '25', n: '10', hours: '168', sites: ['indeed', 'hellowork', 'linkedin', 'glassdoor'], smin: '', sreq: false, ai: true },
+  form: { q: '', locs: [], rad: '25', n: '10', hours: '168', sites: ['indeed', 'hellowork', 'linkedin', 'glassdoor'], smin: '', sreq: false, ai: true, contrats: [] },
 }
 
 export const profile = () => pb.authStore.record?.profile || null
@@ -79,6 +79,7 @@ export function bindAvatars(root = document) {
 
 // Champ « lieux » : jusqu'à 3 pastilles (Entrée ou « ; » valide un lieu), un rayon en km autour de chacun.
 export const RADII = [10, 25, 50, 100]
+export const CONTRATS = ['CDI', 'CDD', 'Alternance', 'Stage', 'Freelance', 'Intérim']
 export const splitPlaces = (s) => String(s || '').split(';').map((x) => x.trim()).filter(Boolean).slice(0, 3)
 export const placesField = (id) => `<div class="field"><label for="${id}">Lieux (3 maximum)</label><div class="tagin" id="${id}-box"><input id="${id}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${id}-list" autocomplete="off" placeholder="Lyon, 69, Nantes…"></div><ul class="sugg" id="${id}-list" role="listbox" hidden></ul></div>`
 export const radiusField = (id, value) => `<label class="field"><span>Rayon autour du lieu</span><select id="${id}">${RADII.map((r) => `<option value="${r}" ${String(value || 25) === String(r) ? 'selected' : ''}>${r} km</option>`).join('')}</select></label>`

@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const b = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
+import { more } from './_lib.mjs';const b = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
 const ctx = await b.newContext({ extraHTTPHeaders: { 'CF-Connecting-IP': '1.2.3.4' }, viewport: { width: 1440, height: 900 } });
 const p = await ctx.newPage(); const errs = []; p.on('console', m => m.type() === 'error' && errs.push(m.text())); p.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
 const ok = (n, c) => console.log((c ? 'OK   ' : 'FAIL ') + n);
@@ -45,7 +45,7 @@ await p.uncheck('[data-toggle]', { force: true }).catch(async () => { await p.lo
 await p.waitForSelector('#toast div'); ok('alerte mise en pause', (await txt('#toast')).includes('pause'));
 
 // créer depuis la recherche
-await p.click('nav [data-nav=search]'); await p.waitForSelector('#q'); await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await p.fill('#n', '2');
+await p.click('nav [data-nav=search]'); await p.waitForSelector('#q'); await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await more(p); await p.fill('#n', '2');
 await p.click('#go'); await p.waitForSelector('.rowitem', { timeout: 120000 });
 await p.click('#mkAlert'); await p.waitForSelector('#alertForm');
 ok('création depuis la recherche : champs préremplis', (await p.inputValue('#alertForm [name=query]')) === 'développeur web' && (await p.locator('#alertForm .tagc').allInnerTexts()).join().includes('Lyon'));

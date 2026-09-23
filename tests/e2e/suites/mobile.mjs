@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-const b = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
+import { more } from './_lib.mjs';const b = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
 const base = { extraHTTPHeaders: { 'CF-Connecting-IP': '1.2.3.4' } };
 const ctx = await b.newContext({ ...base, viewport: { width: 1440, height: 900 } });
 const p0 = await ctx.newPage(); const errs = []; p0.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
@@ -17,7 +17,7 @@ const m = await b.newContext({ ...base, viewport: { width: 390, height: 844 }, h
 const p = await m.newPage(); p.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
 await p.goto('http://localhost:8090/#/search'); await p.waitForSelector('#q');
 ok('avant recherche : formulaire visible, pas de résumé', await p.locator('#form').isVisible() && !(await p.locator('#searchsum').isVisible()));
-await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await p.fill('#n', '4');
+await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await more(p); await p.fill('#n', '4');
 await p.evaluate(() => { for (const v of ['indeed', 'linkedin', 'glassdoor']) { const i = document.querySelector('.site[value=' + v + ']'); if (i.checked) i.click() } });
 await p.click('#go'); await p.waitForFunction(() => document.querySelectorAll('.match.t-strong,.match.t-mid,.match.t-low').length >= 3, null, { timeout: 120000 }); await p.waitForTimeout(700);
 ok('après recherche : formulaire replié, résumé visible', !(await p.locator('#form').isVisible()) && await p.locator('#searchsum').isVisible());
@@ -51,7 +51,7 @@ ok('aucun débordement horizontal', await p.evaluate(() => document.documentElem
 
 // ---------- ordinateur : rien ne change
 const d = await b.newContext({ ...base, viewport: { width: 1440, height: 900 }, storageState: state }); const pd = await d.newPage();
-await pd.goto('http://localhost:8090/#/search'); await pd.waitForSelector('#q'); await pd.fill('#q', 'développeur web'); await pd.fill('#loc', 'Lyon'); await pd.fill('#n', '3');
+await pd.goto('http://localhost:8090/#/search'); await pd.waitForSelector('#q'); await pd.fill('#q', 'développeur web'); await pd.fill('#loc', 'Lyon'); await more(pd); await pd.fill('#n', '3');
 await pd.evaluate(() => { for (const v of ['indeed', 'linkedin', 'glassdoor']) { const i = document.querySelector('.site[value=' + v + ']'); if (i.checked) i.click() } });
 await pd.click('#go'); await pd.waitForFunction(() => document.querySelectorAll('.match.t-strong,.match.t-mid,.match.t-low').length >= 2, null, { timeout: 120000 });
 ok('ordinateur : formulaire non replié, pas de résumé', await pd.locator('#form').isVisible() && !(await pd.locator('#searchsum').isVisible()));
