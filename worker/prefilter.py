@@ -120,7 +120,8 @@ def relevance(titre, description, query, keywords):
 
 
 def enrich(row, query, keywords):
-    text = f"{row.get('title', '')}\n{row.get('description', '')}"
+    # texte de tiers : espaces normalisés (sinon backtracking cubique des regex de salaire) et longueur bornée
+    text = re.sub(r"\s+", " ", f"{row.get('title', '')}\n{row.get('description', '')}")[:6000]
     return {"salaire": salary(row, text), "contrat": contrat(row, text), "teletravail": remote(row, text),
             "pre": relevance(row.get("title", ""), row.get("description", ""), query, keywords)}
 

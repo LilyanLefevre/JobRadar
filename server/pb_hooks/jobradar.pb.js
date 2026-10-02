@@ -150,7 +150,7 @@ routerAdd("POST", "/jr/push/test", (e) => {
 routerAdd("POST", "/jr/search", (e) => {
   const lib = require(`${__hooks}/lib.js`)
   const body = e.requestInfo().body
-  const r = lib.worker("/search", { ...body, user: e.auth.id, keywords: lib.keywordsOf(e.auth) }, 240)
+  const r = lib.worker("/search", { ...body, scheduled: false, user: e.auth.id, keywords: lib.keywordsOf(e.auth) }, 240)
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))
 

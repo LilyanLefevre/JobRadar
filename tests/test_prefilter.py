@@ -1,6 +1,6 @@
 import os, sys, unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "worker"))
-from prefilter import salary, contrat, remote, relevance, places
+from prefilter import enrich, salary, contrat, remote, relevance, places
 
 class T(unittest.TestCase):
     def test_salaires(self):
@@ -18,5 +18,9 @@ class T(unittest.TestCase):
         self.assertGreater(relevance("Développeur React", "TypeScript", "développeur react", ["React", "TypeScript"]), relevance("Cuisinier", "restaurant", "développeur react", ["React"]))
     def test_lieux(self):
         self.assertEqual(places("Lyon, France; Paris ;; Nantes; Lille"), ["Lyon, France", "Paris", "Nantes"]); self.assertEqual(places(["A", " "]), ["A"]); self.assertEqual(places(None), [])
+    def test_redos(self):  # des milliers d'espaces après un nombre ne doivent pas bloquer le worker
+        import time
+        t = time.time(); enrich({"title": "x", "description": "salaire 35" + " " * 20000 + "x"}, "x", []); self.assertLess(time.time() - t, 1)
 
 unittest.main() if __name__ == "__main__" else None
+
