@@ -9,6 +9,9 @@ const mobile = () => matchMedia('(max-width: 1000px)').matches
 // Historique (6 recherches) et dernière recherche : synchronisés sur le compte ; les offres de la dernière recherche restent sur l'appareil.
 const uid = () => pb.authStore.record?.id || ''
 const KEEP = ['q', 'locs', 'rad', 'n', 'hours', 'sites', 'smin', 'sreq', 'contrats']
+// relecture d'une entrée de l'historique (venue du serveur) : clés connues seulement, types vérifiés
+const ARR = ['locs', 'sites', 'contrats']
+const clean = (h) => Object.fromEntries(KEEP.filter((k) => h && Object.hasOwn(h, k) && Array.isArray(h[k]) === ARR.includes(k)).map((k) => [k, h[k]]))
 const pick = (f) => Object.fromEntries(KEEP.map((k) => [k, f[k]]))
 const load = (k) => { try { return JSON.parse(store.get(`jr_${k}_${uid()}`)) } catch { return null } }
 const histLabel = (h) => `${h.q}${h.locs?.length ? ' · ' + h.locs.join(', ') : ''}`
@@ -68,7 +71,7 @@ export function render(root) {
     </form>
     <p class="status" id="status" role="status" aria-live="polite"></p>
     <div class="results"><div class="list" id="list"></div><div class="detail" id="detail"></div></div>`
-  $$('[data-hist]', root).forEach((b) => (b.onclick = () => { Object.assign(state.form, hist()[+b.dataset.hist]); render(root); launch() }))
+  $$('[data-hist]', root).forEach((b) => (b.onclick = () => { Object.assign(state.form, clean(hist()[+b.dataset.hist])); render(root); launch() }))
   $('#clearHist')?.addEventListener('click', () => { syncSearches([], Date.now()); render(root) })
   if (state.lastAt && Object.keys(state.jobs).length) $('#status').textContent = `Dernière recherche ${ago(state.lastAt)} : ${plural(Object.keys(state.jobs).length, 'offre')}. Relancez-la pour actualiser.`
   $('#moreBtn').onclick = () => { moreOpen = !moreOpen; $('#more').hidden = !moreOpen; $('#moreBtn').setAttribute('aria-expanded', String(moreOpen)) }
