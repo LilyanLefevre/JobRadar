@@ -1,6 +1,6 @@
 # JobRadar
 
-Cherchez des offres d'emploi sur Indeed, LinkedIn et Glassdoor, puis laissez une IA comparer **votre CV** à chaque offre : score de match, score du CV pour cette offre, forces, manques et **modifications concrètes à apporter au CV**.
+Cherchez des offres d'emploi sur Indeed, HelloWork, LinkedIn et Glassdoor, puis laissez une IA comparer **votre CV** à chaque offre : score de match, score du CV pour cette offre, forces, manques et **modifications concrètes à apporter au CV**.
 
 Application web multi-utilisateurs : connexion Google / GitHub, et **chaque utilisateur choisit son fournisseur d'IA et fournit sa propre clé API** (Gemini, Mistral, Groq, Z.ai, DeepSeek ou Claude : plusieurs ont une offre gratuite). L'opérateur n'avance aucun frais d'IA.
 
@@ -20,7 +20,7 @@ L'interface a trois pages : **Recherche**, **Mon profil** et **Paramètres**.
 2. **Paramètres** : l'utilisateur choisit un fournisseur d'IA et colle sa clé API (vérifiée, puis stockée chiffrée).
 3. **Mon profil** : il importe son CV en **PDF** (ou colle son texte, ou remplit à la main). Le texte est extrait puis structuré par son IA. Il **vérifie et corrige** ensuite chaque information : identité, expériences (avec leur *catégorie* : emploi, stage, alternance, freelance, projet, bénévolat), formations, compétences classées par catégorie, langues et critères de recherche (postes visés, contrats, lieux, télétravail, niveau). Le PDF n'est pas conservé ; l'utilisateur n'écrit jamais de fichier markdown.
 4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match.
-5. Pour chaque offre : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
+5. Pour chaque offre, la **description complète** s'affiche directement (rendue en mise en forme, pas en markdown brut), avec : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
 
 **Sans configuration, la recherche fonctionne quand même** : si l'IA ou le profil manque, une fenêtre propose de configurer (ou de chercher sans scores). Les offres s'affichent alors sans évaluation, et chacune peut être évaluée plus tard.
 
@@ -74,7 +74,7 @@ sequenceDiagram
 
     U->>A: POST /jr/search
     A->>W: /search (id utilisateur)
-    W-->>U: offres (via app)
+    W-->>U: offres + descriptions (via app)
 
     loop pour chaque offre
         U->>A: POST /jr/evaluate (offre)
@@ -198,6 +198,8 @@ WORKER_URL=http://127.0.0.1:5055 WORKER_SECRET=dev \
   --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public
 ```
 
+Tests : `node --test tests/md.test.mjs` vérifie que le rendu des descriptions n'injecte jamais de HTML actif.
+
 Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local.
 
 ## Sécurité et données
@@ -213,6 +215,7 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 
 ## Limites
 
+- JobSpy ne couvre ni l'APEC, ni Welcome to the Jungle, ni France Travail : ces offres n'apparaissent pas.
 - Le scraping des job boards peut enfreindre leurs conditions d'utilisation et provoquer des blocages d'IP : volumes modestes, quota par utilisateur, inscription sur invitation recommandée.
 - Les résultats de recherche ne sont pas conservés (seuls le profil et la clé API le sont).
 - L'import fonctionne sur les PDF contenant du texte (5 Mo et 15 pages maximum) ; un PDF scanné (image) n'est pas lu : collez le texte ou remplissez le profil. L'extraction par IA peut se tromper, d'où l'étape de vérification.
@@ -229,7 +232,8 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 │   ├── Dockerfile            # binaire vérifié par SHA-256, amd64 + arm64
 │   ├── pb_migrations/        # schéma : profil, secrets, fournisseur, limites de débit, règle d'inscription
 │   ├── pb_hooks/             # routes /jr/*, sécurité (en-têtes, admin, inscriptions)
-│   └── pb_public/            # interface : index.html, style.css, app.js (routeur), search/profile/settings.js, SDK PocketBase
+│   └── pb_public/            # interface : index.html, style.css, app.js (routeur), search/profile/settings/md.js, SDK PocketBase
+├── tests/                    # tests du rendu markdown des descriptions
 ├── worker/                   # service Python interne
 │   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation
 │   └── providers.json        # fournisseurs d'IA et modèles

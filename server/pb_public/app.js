@@ -1,7 +1,7 @@
-import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel } from './lib.js'
-import * as search from './search.js'
-import * as profileView from './profile.js?v=2'
-import * as settings from './settings.js'
+import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel } from './lib.js?v=__V__'
+import * as search from './search.js?v=__V__'
+import * as profileView from './profile.js?v=__V__'
+import * as settings from './settings.js?v=__V__'
 
 const routes = { search, profile: profileView, settings }
 

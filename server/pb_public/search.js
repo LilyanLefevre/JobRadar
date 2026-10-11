@@ -1,6 +1,7 @@
-import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store } from './lib.js'
+import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store } from './lib.js?v=__V__'
+import { renderMarkdown } from './md.js?v=__V__'
 
-const SITES = [['indeed', 'Indeed'], ['linkedin', 'LinkedIn'], ['glassdoor', 'Glassdoor']]
+const SITES = [['indeed', 'Indeed'], ['hellowork', 'HelloWork'], ['linkedin', 'LinkedIn'], ['glassdoor', 'Glassdoor']]
 const cls = (n) => (n >= 70 ? 'hi' : n >= 45 ? 'md' : 'lo')
 let running = false
 
@@ -140,6 +141,7 @@ function detail(j) {
     <h2>${esc(j.titre)}</h2>
     <p class="muted small">${esc(j.entreprise)} · ${esc(j.lieu)} · ${esc(j.site)} · <a href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre</a></p>
     <div class="section">${body}</div>
-    <details class="section"><summary>Description de l'offre</summary><pre>${esc(j.description)}</pre></details></div>`
+    <h3 class="section">Description de l'offre</h3>
+    <div class="md">${j.description ? renderMarkdown(j.description) : '<p class="muted">Aucune description fournie par le site.</p>'}</div></div>`
   $('#evalOne')?.addEventListener('click', () => evaluateOne(j))
 }

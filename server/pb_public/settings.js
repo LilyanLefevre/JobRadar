@@ -1,4 +1,4 @@
-import { $, esc, call, pb, state, toast, bus, providerLabel } from './lib.js'
+import { $, esc, call, pb, state, toast, bus, providerLabel } from './lib.js?v=__V__'
 
 async function refreshStatus() {
   state.key = await call('status')

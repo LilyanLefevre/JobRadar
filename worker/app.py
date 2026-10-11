@@ -25,7 +25,7 @@ WORKER_SECRET = os.environ["WORKER_SECRET"]
 FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256(os.environ["SECRETS_KEY"].encode()).digest()))
 PROVIDERS = {p["id"]: p for p in json.load(open(os.environ.get("PROVIDERS_FILE") or os.path.join(os.path.dirname(__file__), "providers.json")))}
 SEARCHES_PER_DAY = int(os.environ.get("SEARCHES_PER_DAY", "10"))
-SITES = {"indeed", "linkedin", "glassdoor"}
+SITES = {"indeed", "hellowork", "linkedin", "glassdoor"}
 
 # ponytail: compteurs en mémoire (remis à zéro au redémarrage), une base si plusieurs workers.
 _searches: dict[str, tuple[date, int]] = {}
