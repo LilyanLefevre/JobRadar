@@ -1,0 +1,16 @@
+{
+  "name": "JobRadar",
+  "short_name": "JobRadar",
+  "description": "Offres d'emploi évaluées par IA, alertes quotidiennes et conseils pour votre CV.",
+  "lang": "fr",
+  "start_url": "/#/search",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#EDF1F6",
+  "theme_color": "#08397A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

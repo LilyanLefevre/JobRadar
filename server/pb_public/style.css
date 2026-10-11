@@ -296,3 +296,13 @@ input[type=range]{padding:0;accent-color:var(--action);min-height:44px}
   .alertrow{grid-template-columns:auto minmax(0,1fr)}.alertrow .tools{grid-column:1/-1;justify-content:flex-end}
   nav.tabs a{padding:0 8px;font-size:15px}.badge{margin-left:4px}
 }
+
+/* Paramètres : fournisseurs d'IA et appareils */
+.stack-lg{display:flex;flex-direction:column;gap:48px}
+.provlist{display:flex;flex-direction:column;gap:8px}
+.provrow{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 12px 14px}
+.provrow .rank{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--blue-weak);font:700 14px var(--sign);color:var(--ink)}
+.provrow b{font:600 17px var(--sans)}.provrow .sub{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.provrow .tools{flex-wrap:nowrap;gap:2px}
+ul.devs li{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}ul.devs li:first-child{border-top:0}
+@media (max-width:720px){.provrow{grid-template-columns:28px minmax(0,1fr)}.provrow .tools{grid-column:1/-1;justify-content:flex-end}}

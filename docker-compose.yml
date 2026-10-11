@@ -11,6 +11,7 @@ services:
       TZ: ${TZ:-Europe/Paris} # fuseau des alertes quotidiennes
       ALERTS_CRON: ${ALERTS_CRON:-0 7 * * *}
       ALERTS_PER_USER: ${ALERTS_PER_USER:-3}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-} # adresse de contact des notifications push (mailto:vous@exemple.com)
       ADMIN_PUBLIC: ${ADMIN_PUBLIC:-}
     security_opt: ["no-new-privileges:true"]
     read_only: true

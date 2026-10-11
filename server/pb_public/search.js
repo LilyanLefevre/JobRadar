@@ -1,4 +1,4 @@
-import { $, $$, esc, call, pb, state, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store, setupTodo, SITE, SITE_NAME, tier } from './lib.js?v=__V__'
+import { $, $$, esc, call, pb, state, providerLabel, toast, openDialog, closeDialog, dialogResult, canEvaluate, hasProfile, profile, store, setupTodo, SITE, SITE_NAME, tier } from './lib.js?v=__V__'
 import { renderMarkdown } from './md.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import { openAlertDialog } from './alerts.js?v=__V__'
@@ -76,10 +76,10 @@ async function runSearch() {
 }
 
 // Mémoire d'abord (une offre déjà évaluée pour ce profil n'est pas repayée), puis un appel d'IA par lot d'offres inconnues.
-// La taille du lot dépend du fournisseur (providers.json) : grande pour les modèles à long contexte, petite pour les offres gratuites limitées.
+// Taille de lot unique, donnée par le serveur (EVAL_BATCH) : la bascule d'un fournisseur à l'autre marche avec le même lot.
 const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`
 const slim = (j) => ({ site: j.site, url: j.url, titre: j.titre, entreprise: j.entreprise, lieu: j.lieu, description: (j.description || '').slice(0, 1500) })
-const batchSize = () => state.providers.find((p) => p.id === state.key.provider)?.batch || 8
+const batchSize = () => state.batch || 15
 
 async function evaluateAll(list) {
   const todo = list.filter((j) => !j.ev && !j.evaluating)
@@ -97,16 +97,17 @@ async function evaluateAll(list) {
   const s = $('#status')
   if (s) s.textContent = known ? `${plural(known, 'offre')} déjà évaluée${known > 1 ? 's' : ''} (mémoire), ${unknown.length} à évaluer…` : ''
   paint()
-  let done = 0, stop = false
+  let done = 0, stop = false, switchedTo = ''
   const worker = async () => {
     while (chunks.length && !stop) {
       const chunk = chunks.shift()
       try {
         const res = await call('evaluate/batch', 'POST', { jobs: chunk.map(slim) })
+        if (res.switched) switchedTo = res.via
         chunk.forEach((j, i) => { j.ev = res.results?.[i] || { error: "Cette offre n'a pas été évaluée, réessayez." } })
       } catch (e) {
         chunk.forEach((j) => (j.ev = { error: e.message }))
-        if ([400, 401, 429].includes(e.status)) { stop = true; toast(e.message, 'err') }
+        if ([400, 401, 429, 503].includes(e.status)) { stop = true; toast(e.message, 'err') }
       }
       chunk.forEach((j) => (j.evaluating = false)); done += chunk.length
       const st = $('#status'); if (st) st.textContent = `Évaluation ${done}/${unknown.length}…`
@@ -116,6 +117,7 @@ async function evaluateAll(list) {
   await Promise.all([worker(), worker()])
   chunks.flat().forEach((j) => (j.evaluating = false))
   const st = $('#status'); if (st) st.textContent = stop ? 'Évaluations interrompues.' : known ? `Évaluations terminées (${known} en mémoire, ${unknown.length} nouvelles).` : 'Évaluations terminées.'
+  if (switchedTo && st) st.textContent += ` Fournisseur de secours utilisé : ${providerLabel(switchedTo)}.`
   paint()
 }
 

@@ -14,15 +14,17 @@ Application web multi-utilisateurs : connexion Google / GitHub, et **chaque util
 
 ## Fonctionnement
 
+**Application installable (PWA)** : JobRadar se comporte comme une application sur téléphone (« Ajouter à l'écran d'accueil »), avec des notifications push chiffrées (clés VAPID générées automatiquement au premier usage). Sur iPhone, les notifications ne fonctionnent que dans l'application installée (iOS 16.4 minimum).
+
 L'interface a quatre pages : **Recherche**, **Alertes**, **Mon profil** et **Paramètres** (accessible, comme le compte, depuis le menu de l'avatar). Une pastille « Terminer la configuration » reste dans la barre tant que l'IA ou le CV manque.
 
 1. **Connexion** avec GitHub ou Google.
-2. **Paramètres** : l'utilisateur choisit un fournisseur d'IA et colle sa clé API (vérifiée, puis stockée chiffrée).
+2. **Paramètres** : l'utilisateur ajoute **un ou plusieurs fournisseurs d'IA** avec leur clé API (vérifiée, puis stockée chiffrée) et les classe par priorité. Le premier est utilisé ; s'il est indisponible (limite de débit, panne, crédit épuisé, clé refusée), JobRadar bascule automatiquement sur le suivant et met le fautif en pause quelques minutes (24 h si la clé est refusée).
 3. **Mon profil** : il importe son CV en **PDF** (ou colle son texte, ou remplit à la main). Le texte est extrait puis structuré par son IA. Il **vérifie et corrige** ensuite chaque information : identité, expériences (avec leur *catégorie* : emploi, stage, alternance, freelance, projet, bénévolat), formations, compétences classées par catégorie, langues et critères de recherche (postes visés, contrats, lieux, télétravail, niveau). Le PDF n'est pas conservé ; l'utilisateur n'écrit jamais de fichier markdown.
-4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match. Les scores sont calculés **par lot d'offres en une seule requête d'IA** (le profil n'est envoyé qu'une fois ; taille du lot propre à chaque fournisseur, de 8 à 25). Une offre déjà évaluée pour le même profil n'est **pas réévaluée** (mémoire par empreinte), et si l'IA saute une offre d'un lot, elle est redemandée une fois. Les modifications de CV, plus coûteuses, se demandent offre par offre.
+4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match. Les scores sont calculés **par lot de 15 offres en une seule requête d'IA** (le profil n'est envoyé qu'une fois ; taille unique pour tous les fournisseurs, réglable avec `EVAL_BATCH`, pour que la bascule marche avec n'importe lequel). Une offre déjà évaluée pour le même profil n'est **pas réévaluée** (mémoire par empreinte), et si l'IA saute une offre d'un lot, elle est redemandée une fois. Les modifications de CV, plus coûteuses, se demandent offre par offre.
 5. Pour chaque offre, la **description complète** s'affiche directement (rendue en mise en forme, pas en markdown brut), avec : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
 
-**Alertes quotidiennes** : depuis une recherche (« Créer une alerte ») ou la page Alertes, l'utilisateur enregistre jusqu'à 3 recherches (poste, lieu, sites, ancienneté, score minimum). Chaque matin, JobRadar les relance avec **le profil et la clé de cet utilisateur**, écarte les offres déjà vues, évalue les nouvelles (par lot, avec la mémoire) et publie un **rapport** : seules les nouvelles offres au-dessus du score apparaissent, avec une pastille de rapports non lus dans la navigation. La page est pensée pour le téléphone. « Lancer maintenant » déclenche un passage à la demande (un par 10 minutes et par alerte). Pas de notification externe (e-mail, push) pour l'instant.
+**Alertes quotidiennes** : depuis une recherche (« Créer une alerte ») ou la page Alertes, l'utilisateur enregistre jusqu'à 3 recherches (poste, lieu, sites, ancienneté, score minimum). Chaque matin, JobRadar les relance avec **le profil et la clé de cet utilisateur**, écarte les offres déjà vues, évalue les nouvelles (par lot, avec la mémoire) et publie un **rapport** : seules les nouvelles offres au-dessus du score apparaissent, avec une pastille de rapports non lus dans la navigation. La page est pensée pour le téléphone. « Lancer maintenant » déclenche un passage à la demande (un par 10 minutes et par alerte). Quand un passage trouve du nouveau, une **notification push** est envoyée aux appareils abonnés (l'e-mail viendra ensuite, par le même point d'envoi).
 
 **Sans configuration, la recherche fonctionne quand même** : si l'IA ou le profil manque, une fenêtre propose de configurer (ou de chercher sans scores). Les offres s'affichent alors sans évaluation, et chacune peut être évaluée plus tard.
 
@@ -94,7 +96,7 @@ sequenceDiagram
 
 ## Fournisseurs d'IA
 
-Définis dans [`worker/providers.json`](worker/providers.json) (identifiant, libellé, URL, modèle, mention de confidentialité). Le champ `batch` règle le nombre d'offres évaluées par requête (grand pour les modèles à long contexte, petit pour les offres gratuites limitées en débit). Pour en ajouter un : toute API compatible OpenAI (`"kind": "openai"`) s'ajoute avec une entrée, sans toucher au code.
+Définis dans [`worker/providers.json`](worker/providers.json) (identifiant, libellé, URL, modèle, mention de confidentialité). Pour en ajouter un : toute API compatible OpenAI (`"kind": "openai"`) s'ajoute avec une entrée, sans toucher au code.
 
 | Fournisseur | Gratuit | Remarque |
 |---|---|---|
@@ -134,7 +136,8 @@ Tout se règle dans `.env` (modèle : [`.env.example`](.env.example)). Jamais co
 | `TZ` | `Europe/Paris` | Fuseau horaire du serveur, donc des alertes. |
 | `ALERTS_CRON` | `0 7 * * *` | Heure du passage quotidien des alertes (format cron). |
 | `ALERTS_PER_USER` | `3` | Alertes maximum par utilisateur. |
-| `EVAL_BATCH` | vide | Remplace la taille de lot des fournisseurs (1 à 40). |
+| `EVAL_BATCH` | `15` | Offres évaluées par requête d'IA, pour tous les fournisseurs (1 à 40). À baisser si un fournisseur gratuit refuse des lots trop gros. |
+| `VAPID_SUBJECT` | `mailto:noreply@example.com` | Adresse de contact transmise aux services de notification push. Mettez la vôtre. |
 | `SIGNUP_ALLOWLIST` | vide | E-mails autorisés à s'inscrire, séparés par des virgules. Vide = inscription ouverte. |
 | `JOBRADAR_MODEL` | vide | Remplace le modèle Claude de `providers.json`. |
 | `JOBRADAR_BIND` | `127.0.0.1` | Adresse d'écoute (`0.0.0.0` pour le réseau local). |
@@ -228,6 +231,7 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 - JobSpy ne couvre ni l'APEC, ni Welcome to the Jungle, ni France Travail : ces offres n'apparaissent pas.
 - Le scraping des job boards peut enfreindre leurs conditions d'utilisation et provoquer des blocages d'IP : volumes modestes, quota par utilisateur, inscription sur invitation recommandée.
 - Les résultats d'une recherche manuelle ne sont pas conservés ; sont conservés le profil, la clé API, une **mémoire des évaluations** (30 jours), les alertes, leurs rapports (60 jours) et la liste des offres déjà vues (90 jours), le tout supprimé avec le compte.
+- Les notifications push dépendent des services de Google, Mozilla, Apple ou Microsoft selon le navigateur ; le contenu est chiffré de bout en bout.
 - Les alertes consomment l'IA de l'utilisateur (au plus 60 nouvelles offres évaluées par passage). Les passages sont séquentiels : avec beaucoup d'utilisateurs, ils s'étalent sur la matinée.
 - L'import fonctionne sur les PDF contenant du texte (5 Mo et 15 pages maximum) ; un PDF scanné (image) n'est pas lu : collez le texte ou remplissez le profil. L'extraction par IA peut se tromper, d'où l'étape de vérification.
 - Les évaluations sont des suggestions d'une IA : relisez-les, elles peuvent se tromper. N'y laissez jamais inventer d'expérience.

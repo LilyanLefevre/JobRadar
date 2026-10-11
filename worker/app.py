@@ -16,6 +16,11 @@ import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import Flask, jsonify, request
 from jobspy import scrape_jobs
+from py_vapid import Vapid
+from py_vapid.utils import b64urlencode
+from pywebpush import WebPushException, webpush
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from urllib.parse import urlparse
 from pydantic import BaseModel
 from pypdf import PdfReader
 
@@ -215,7 +220,7 @@ def check_secret():
 
 @app.get("/providers")
 def providers():
-    return jsonify(providers=[{k: v for k, v in p.items() if k not in ("base_url", "model", "kind")} for p in PROVIDERS.values()])
+    return jsonify(providers=[{k: v for k, v in p.items() if k not in ("base_url", "model", "kind")} for p in PROVIDERS.values()], batch=_batch_limit())
 
 
 @app.post("/seal")
@@ -237,6 +242,57 @@ def seal():
     except (anthropic.APIError, requests.RequestException) as e:
         return jsonify(error=f"Vérification impossible : {e}"), 502
     return jsonify(enc=FERNET.encrypt(key.encode()).decode())
+
+
+# ---- Notifications push (Web Push, chiffrées de bout en bout) ----
+# L'adresse d'un abonnement est fournie par l'utilisateur : on n'envoie qu'aux vrais services de push (pas d'appel vers le réseau interne).
+PUSH_SUFFIXES = ("fcm.googleapis.com", "android.googleapis.com", "push.services.mozilla.com", "push.apple.com", "notify.windows.com")
+PUSH_EXTRA = [h.strip() for h in os.environ.get("PUSH_ALLOWED_HOSTS", "").split(",") if h.strip()]  # hôtes de test, jamais en production
+
+
+def _push_ok(endpoint):
+    u = urlparse(str(endpoint))
+    h = u.hostname or ""
+    if h in PUSH_EXTRA:
+        return True
+    return u.scheme == "https" and any(h == x or h.endswith("." + x) for x in PUSH_SUFFIXES)
+
+
+@app.post("/vapid/new")
+def vapid_new():
+    v = Vapid()
+    v.generate_keys()
+    return jsonify(public=b64urlencode(v.public_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)), private=v.private_pem().decode())
+
+
+@app.post("/push/check")
+def push_check():
+    return jsonify(ok=_push_ok(_body().get("endpoint")))
+
+
+@app.post("/push")
+def push():
+    d = _body()
+    try:
+        vapid = Vapid.from_pem(_s(d.get("vapid_private"), 4000).encode())
+    except Exception:
+        return jsonify(error="Clé VAPID invalide."), 400
+    subject = _s(d.get("subject"), 200) or "mailto:noreply@example.com"
+    pl = d.get("payload") if isinstance(d.get("payload"), dict) else {}
+    data = json.dumps({"title": _s(pl.get("title"), 80), "body": _s(pl.get("body"), 200), "url": _s(pl.get("url"), 200) or "/#/alerts", "tag": _s(pl.get("tag"), 60)})
+    out = []
+    for sub in (d.get("subs") if isinstance(d.get("subs"), list) else [])[:20]:
+        if not isinstance(sub, dict) or not _push_ok(sub.get("endpoint")):
+            out.append("blocked"); continue
+        try:
+            webpush(subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": _s(sub.get("p256dh"), 200), "auth": _s(sub.get("auth"), 100)}},
+                    data=data, vapid_private_key=vapid, vapid_claims={"sub": subject}, ttl=86400, timeout=10)
+            out.append("ok")
+        except WebPushException as e:
+            out.append("gone" if getattr(e.response, "status_code", None) in (404, 410) else "error")
+        except Exception:
+            out.append("error")
+    return jsonify(results=out)
 
 
 @app.post("/search")
@@ -302,28 +358,29 @@ def _ask_anthropic(prov, key, prompt, model):
 
 
 def _run(d, prompt, model):
-    """Appelle le fournisseur de l'utilisateur ; renvoie (objet, None) ou (None, réponse d'erreur)."""
+    """Appelle le fournisseur de l'utilisateur ; renvoie (objet, None) ou (None, réponse d'erreur).
+    Le champ « code » sert à la bascule : auth (clé refusée), rate_limit, unavailable (panne, crédit épuisé, modèle absent), bad_output."""
     prov = PROVIDERS.get(d.get("provider"))
     if not prov or not isinstance(d.get("enc"), str):
-        return None, (jsonify(error="Requête invalide."), 400)
+        return None, (jsonify(error="Requête invalide.", code="invalid"), 400)
     try:
         key = FERNET.decrypt(d["enc"].encode()).decode()
     except InvalidToken:
-        return None, (jsonify(error="Clé illisible, enregistrez-la à nouveau."), 400)
+        return None, (jsonify(error="Clé illisible, enregistrez-la à nouveau.", code="auth"), 401)
     try:
         res = (_ask_anthropic if prov["kind"] == "anthropic" else _ask_openai)(prov, key, prompt, model)
     except (PermissionError, anthropic.AuthenticationError):
-        return None, (jsonify(error=f"Clé refusée par {prov['label']}."), 401)
+        return None, (jsonify(error=f"Clé refusée par {prov['label']}.", code="auth"), 401)
     except (ConnectionRefusedError, anthropic.RateLimitError):
-        return None, (jsonify(error=f"Limite de débit de {prov['label']} atteinte, réessayez dans un instant."), 429)
+        return None, (jsonify(error=f"Limite de débit de {prov['label']} atteinte.", code="rate_limit"), 429)
     except anthropic.APIStatusError as ex:  # crédit épuisé, modèle indisponible...
-        return None, (jsonify(error=ex.message), 502)
-    except requests.RequestException as ex:
-        return None, (jsonify(error=f"{prov['label']} injoignable ou en erreur : {ex}"), 502)
+        return None, (jsonify(error=f"{prov['label']} : {ex.message}", code="unavailable"), 502)
+    except (requests.RequestException, anthropic.APIConnectionError):
+        return None, (jsonify(error=f"{prov['label']} injoignable ou en erreur.", code="unavailable"), 502)
     except ValueError:  # JSON absent ou non conforme au schéma
-        return None, (jsonify(error="Réponse du modèle inexploitable, réessayez."), 502)
+        return None, (jsonify(error=f"Réponse de {prov['label']} inexploitable.", code="bad_output"), 502)
     if res is None:
-        return None, (jsonify(error="Réponse inexploitable."), 502)
+        return None, (jsonify(error=f"Réponse de {prov['label']} inexploitable.", code="bad_output"), 502)
     return res, None
 
 
@@ -351,9 +408,10 @@ def cv_extract():
     return err if err else jsonify(profile=res.model_dump())
 
 
-def _batch_limit(prov):
-    """Taille de lot : réglée par fournisseur (providers.json), surchargeable par EVAL_BATCH, jamais au-delà de 40."""
-    return max(1, min(int(os.environ.get("EVAL_BATCH") or prov.get("batch", 8)), 40))
+def _batch_limit(prov=None):
+    """Taille de lot unique pour tous les fournisseurs (la bascule d'un fournisseur à l'autre doit marcher avec le même lot) : EVAL_BATCH, 15 par défaut.
+    À baisser si un fournisseur à contexte ou débit limité (offres gratuites) refuse des lots trop gros."""
+    return max(1, min(int(os.environ.get("EVAL_BATCH") or 15), 40))
 
 
 def _model_of(prov):
@@ -385,7 +443,7 @@ def evaluate_batch():
         return jsonify(error="Requête invalide."), 400
     if not cv.strip():
         return jsonify(error="Profil vide : ajoutez votre CV."), 400
-    jobs = jobs[:_batch_limit(prov)]
+    jobs = jobs[:_batch_limit()]
     out, err = _batch_once(d, cv, jobs)
     if err:
         return err
@@ -407,14 +465,12 @@ def _job_fp(j):
 def keys():
     """Empreintes de cache : offre + profil + fournisseur/modèle + prompt. Si l'un change, l'empreinte change et l'offre est réévaluée."""
     d = _body()
-    prov = PROVIDERS.get(d.get("provider"))
     jobs = [j if isinstance(j, dict) else {} for j in (d.get("jobs") if isinstance(d.get("jobs"), list) else [])][:200]
     mode = "full" if d.get("mode") == "full" else "light"
-    if not prov:
-        return jsonify(error="Fournisseur inconnu."), 400
     profile_hash = hashlib.sha256((render_profile(d.get("profile")) or _s(d.get("cv"), 20000)).encode()).hexdigest()[:20]
-    rev = hashlib.sha256(f"{prov['id']}|{_model_of(prov)}|{PROMPT if mode == 'full' else BATCH_PROMPT}".encode()).hexdigest()[:12]
-    return jsonify(keys=[f"{mode[0]}{rev}{profile_hash}{_job_fp(j)}" for j in jobs], batch=_batch_limit(prov))
+    # indépendante du fournisseur : une évaluation de secours sert aussi quand le principal revient
+    rev = hashlib.sha256((PROMPT if mode == "full" else BATCH_PROMPT).encode()).hexdigest()[:12]
+    return jsonify(keys=[f"{mode[0]}{rev}{profile_hash}{_job_fp(j)}" for j in jobs], batch=_batch_limit())
 
 
 @app.post("/evaluate")

@@ -29,8 +29,8 @@ async function start() {
 async function enter() {
   $('#brand').innerHTML = `${ic('radar')}<span>JobRadar</span>`
   try {
-    const [{ providers }, key] = await Promise.all([call('providers'), call('status')])
-    state.providers = providers; state.key = key
+    const [{ providers, batch }, key] = await Promise.all([call('providers'), call('status')])
+    state.providers = providers; state.batch = batch; state.key = key
   } catch (e) { toast(e.message, 'err') }
   chrome()
   route()
@@ -43,7 +43,8 @@ function chrome() {
   const initials = name.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('') || '?'
   const p = profile(), k = state.key
   const profTag = p?.verifie ? '<span class="tag ok">Validé</span>' : hasProfile() ? '<span class="tag warn">À vérifier</span>' : '<span class="tag warn">Vide</span>'
-  const iaTag = k.has_key ? `<span class="tag ok">IA · ${esc(providerLabel(k.provider))}</span>` : '<span class="tag warn">IA à configurer</span>'
+  const n = (k.providers || []).length
+  const iaTag = k.has_key ? `<span class="tag ok">IA · ${esc(providerLabel(k.provider))}${n > 1 ? ` +${n - 1}` : ''}</span>` : '<span class="tag warn">IA à configurer</span>'
   $('#end').innerHTML = `${todo.length ? `<a class="setup" href="${todo[0].to}">${ic('alert')}<span>Terminer la configuration</span></a>` : ''}
     <div class="acct"><button class="avatar" id="acctBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu" aria-label="Menu du compte de ${esc(name)}">${esc(initials)}</button>
       <div class="menu" id="acctMenu" role="menu" aria-label="Compte" hidden>
@@ -90,5 +91,8 @@ window.addEventListener('hashchange', () => {
   }
   lastHash = location.hash; route(); alertsView.refreshBadge()
 })
+
+// PWA : le service worker reçoit les notifications push ; aucun cache, donc jamais de version périmée.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then((r) => r.update()).catch(() => {})
 
 start()
