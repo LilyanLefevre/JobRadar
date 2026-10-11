@@ -3,4 +3,5 @@ flask
 gunicorn
 anthropic
 cryptography
+requests
 pydantic

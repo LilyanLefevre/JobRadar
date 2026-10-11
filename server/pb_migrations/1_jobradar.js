@@ -12,8 +12,8 @@ migrate((app) => {
     type: "base",
     name: "secrets",
     fields: [
-      new RelationField({ name: "user", required: true, collectionId: users.id, maxSelect: 1, cascadeDelete: true }),
-      new TextField({ name: "api_key_enc", required: true }),
+      { name: "user", type: "relation", required: true, collectionId: users.id, maxSelect: 1, cascadeDelete: true },
+      { name: "api_key_enc", type: "text", required: true },
     ],
     indexes: ["CREATE UNIQUE INDEX idx_secrets_user ON secrets (user)"],
   }))

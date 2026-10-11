@@ -22,7 +22,7 @@ services:
     environment:
       WORKER_SECRET: ${WORKER_SECRET:?set WORKER_SECRET in .env}
       SECRETS_KEY: ${SECRETS_KEY:?set SECRETS_KEY in .env}
-      JOBRADAR_MODEL: ${JOBRADAR_MODEL:-claude-opus-5-5}
+      JOBRADAR_MODEL: ${JOBRADAR_MODEL:-}
       SEARCHES_PER_DAY: ${SEARCHES_PER_DAY:-10}
 
   # Optionnel: tunnel Cloudflare (profil "tunnel"); route à créer dans le tableau de bord Cloudflare vers http://app:8090

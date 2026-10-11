@@ -60,11 +60,13 @@ details{margin-top:14px}pre{white-space:pre-wrap;font:12px/1.5 inherit;color:var
   <h1>Job<span>Radar</span></h1>
   <div class="who"><span id="who"></span><a id="logout">Déconnexion</a></div>
 
-  <h2>Clé API Anthropic</h2>
+  <h2>IA pour les évaluations</h2>
   <p class="mute" id="keyState"></p>
-  <input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
+  <select id="provider"></select>
+  <p class="mute" id="provNote" style="font-size:12px"></p>
+  <input id="key" type="password" placeholder="Clé API" autocomplete="off">
   <div class="row"><button class="ghost" id="saveKey">Enregistrer</button><button class="ghost" id="delKey">Supprimer</button></div>
-  <p class="mute" style="font-size:12px">Créez-la sur console.anthropic.com. Elle est vérifiée puis stockée chiffrée, et sert uniquement à vos évaluations (facturées sur votre compte Anthropic).</p>
+  <p class="mute" style="font-size:12px">Votre clé est vérifiée puis stockée chiffrée. Elle sert uniquement à vos évaluations, avec votre quota ou sur votre compte.</p>
 
   <h2>Mon CV (texte / markdown)</h2>
   <textarea id="cv" placeholder="Collez votre CV ici"></textarea>
@@ -129,14 +131,27 @@ async function enter() {
   $('#cv').value = u.cv || '';
   keyState();
 }
+let providers = [];
 async function keyState() {
-  const {has_key} = await call('status');
-  $('#keyState').textContent = has_key ? '✓ Clé enregistrée.' : 'Aucune clé : ajoutez-la pour lancer les évaluations.';
+  if (!providers.length) {
+    providers = (await call('providers')).providers;
+    $('#provider').innerHTML = providers.map(p => `<option value="${esc(p.id)}">${esc(p.label)}${p.free ? ' · gratuit' : ''}</option>`).join('');
+    $('#provider').onchange = provNote;
+  }
+  const {has_key, provider} = await call('status');
+  if (provider) $('#provider').value = provider;
+  const label = providers.find(p => p.id === provider)?.label;
+  $('#keyState').textContent = has_key ? `✓ Clé enregistrée (${label || provider}).` : 'Aucune clé : choisissez un fournisseur et ajoutez-la.';
+  provNote();
+}
+function provNote() {
+  const p = providers.find(p => p.id === $('#provider').value);
+  $('#provNote').innerHTML = p ? `${esc(p.note)} <a href="${esc(p.key_url)}" target="_blank" rel="noopener">Obtenir une clé</a>` : '';
 }
 
 $('#logout').onclick = () => { pb.authStore.clear(); start(); };
 $('#saveKey').onclick = async () => {
-  try { await call('key', 'POST', {key: $('#key').value}); $('#key').value = ''; keyState(); }
+  try { await call('key', 'POST', {provider: $('#provider').value, key: $('#key').value}); $('#key').value = ''; keyState(); }
   catch (e) { $('#keyState').textContent = e.message; }
 };
 $('#delKey').onclick = async () => { await call('key', 'DELETE'); keyState(); };
