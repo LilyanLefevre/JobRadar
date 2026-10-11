@@ -14,7 +14,7 @@ Application web multi-utilisateurs : connexion Google / GitHub, et **chaque util
 
 ## Fonctionnement
 
-**Application installable (PWA)** : JobRadar se comporte comme une application sur téléphone (« Ajouter à l'écran d'accueil »), avec des notifications push chiffrées (clés VAPID générées automatiquement au premier usage). Sur iPhone, les notifications ne fonctionnent que dans l'application installée (iOS 16.4 minimum).
+**Application installable (PWA)** : JobRadar propose lui-même de s'installer (bandeau « Installer » sur Chrome, Edge et Android, mode d'emploi sur iPhone ; « Plus tard » repousse de 14 jours, et deux refus arrêtent les propositions ; une entrée « Installer l'application » reste dans le menu du compte). Une fois installée, elle se comporte comme une application sur téléphone, avec des notifications push chiffrées (clés VAPID générées automatiquement au premier usage). Sur iPhone, les notifications ne fonctionnent que dans l'application installée (iOS 16.4 minimum).
 
 L'interface a quatre pages : **Recherche**, **Alertes**, **Mon profil** et **Paramètres** (accessible, comme le compte, depuis le menu de l'avatar). Une pastille « Terminer la configuration » reste dans la barre tant que l'IA ou le CV manque.
 

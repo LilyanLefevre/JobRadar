@@ -324,3 +324,16 @@ ul.devs li{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px 
 }
 
 @media (max-width:1000px){.sheet .meta a{display:none}} /* le lien « Voir l'offre » est déjà dans la barre du détail */
+
+/* Invitation à installer l'application */
+.installbar{background:var(--blue-weak);border-bottom:1px solid var(--line)}
+.installbar .in{max-width:1120px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:14px}
+.installbar .ic{color:var(--action);width:24px;height:24px}
+.installbar p{flex:1 1 auto;font-size:15px;line-height:1.35;margin:0}
+.installbar .row{flex-wrap:nowrap;gap:6px}
+ol.steps{margin:12px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+ol.steps .ic{vertical-align:-4px}
+#app:has(.mobile-detail) .installbar{display:none}
+@media (max-width:720px){.installbar .in{padding:10px 16px;flex-wrap:wrap;gap:8px 12px}.installbar p{flex:1 1 calc(100% - 40px)}.installbar .row{margin-left:36px}}
+
+nav.tabs a{white-space:nowrap}

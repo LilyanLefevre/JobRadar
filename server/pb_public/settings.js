@@ -1,6 +1,7 @@
 import { $, $$, esc, call, pb, state, toast, bus, providerLabel } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as push from './push.js?v=__V__'
+import * as pwa from './install.js?v=__V__'
 
 const hhmm = (epoch) => new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(epoch * 1000))
 
@@ -58,6 +59,7 @@ export async function render(root) {
             : push.needsInstall() ? `<div class="banner warn">${ic('alert')}<div><b>Installez l'application</b>Sur iPhone, ouvrez le menu Partager, choisissez « Sur l'écran d'accueil », puis ouvrez JobRadar depuis l'icône pour activer les notifications.</div></div>`
             : `<div class="row"><button class="btn ${sub ? 'secondary' : ''}" id="pushToggle">${ic('bell')}${sub ? 'Désactiver sur cet appareil' : 'Activer sur cet appareil'}</button>
                 ${devices.length ? '<button class="btn secondary" id="pushTest">Envoyer une notification de test</button>' : ''}</div>`}
+          ${pwa.canPrompt() ? `<div class="row"><button class="btn secondary" id="installApp">${ic('download')}Installer l'application</button></div>` : ''}
           ${devices.length ? `<div><h3>Appareils abonnés</h3><ul class="plain devs">${devices.map((d) => `<li><span class="grow">${esc(d.label || 'Appareil')}${sub && d.endpoint === sub.endpoint ? ' <span class="tag ok">cet appareil</span>' : ''}</span><button class="btn ghost sm" data-dev="${esc(d.id)}" aria-label="Retirer ${esc(d.label || 'cet appareil')}">${ic('close')}Retirer</button></li>`).join('')}</ul></div>` : '<p class="small muted">Aucun appareil abonné pour le moment.</p>'}
           <p class="xs muted">Bientôt : notifications par e-mail.</p>
         </section>
@@ -98,6 +100,7 @@ export async function render(root) {
     try { sub ? await push.disable() : await push.enable(); toast(sub ? 'Notifications désactivées.' : 'Notifications activées sur cet appareil.'); render(root) }
     catch (err) { toast(err.message, 'err'); e.target.disabled = false }
   })
+  $('#installApp')?.addEventListener('click', async () => { await pwa.install(); render(root) })
   $('#pushTest')?.addEventListener('click', async () => {
     try { const r = await call('push/test', 'POST', {}); toast(r.push ? 'Notification envoyée.' : "Aucune notification n'a pu être envoyée.", r.push ? '' : 'err') } catch (err) { toast(err.message, 'err') }
   })
