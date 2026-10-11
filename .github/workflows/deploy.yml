@@ -19,7 +19,7 @@ jobs:
           - { context: server, tag: jobradar }
           - { context: worker, tag: jobradar-worker }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: owner
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-qemu-action@v3
