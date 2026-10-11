@@ -19,6 +19,7 @@ routerUse((e) => {
   if (!path.startsWith("/_/") && !path.startsWith("/api/")) {
     const h = e.response.header()
     h.set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+    h.set("Cache-Control", "no-cache") // revalider à chaque fois : un cache de bord ne doit jamais figer une ancienne version
     h.set("Referrer-Policy", "no-referrer")
     h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     if (viaTunnel) h.set("Strict-Transport-Security", "max-age=31536000")

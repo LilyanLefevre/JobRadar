@@ -1,6 +1,6 @@
 import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel } from './lib.js'
 import * as search from './search.js'
-import * as profileView from './profile.js'
+import * as profileView from './profile.js?v=2'
 import * as settings from './settings.js'
 
 const routes = { search, profile: profileView, settings }
