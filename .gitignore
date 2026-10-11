@@ -4,3 +4,9 @@ __pycache__/
 pb_data/
 CLAUDE.md
 .claude/
+
+# Impeccable : captures de revue et page de décision (locales)
+.impeccable/review/
+.impeccable/decision-payload.json
+.impeccable/mocks/
+.impeccable/build/

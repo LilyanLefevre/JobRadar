@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T00:00:00Z",
+  "title": "Design System: JobRadar",
+  "extensions": {
+    "colorMeta": {
+      "sign-blue": { "role": "primary", "displayName": "Bleu de panneau", "canonical": "#0B4F9C", "tonalRamp": ["#04203F", "#062F5E", "#08397A", "#0B4F9C", "#2468C9", "#5DA3F5", "#A9CCF8", "#E4EDF8"] },
+      "sign-blue-deep": { "role": "primary", "displayName": "Bleu profond", "canonical": "#08397A", "tonalRamp": ["#030F20", "#05204A", "#08397A", "#0B4F9C", "#2468C9", "#5DA3F5", "#A9CCF8", "#E4EDF8"] },
+      "marking-yellow": { "role": "secondary", "displayName": "Jaune de balisage", "canonical": "#FFD500", "tonalRamp": ["#3D3300", "#665500", "#998000", "#CCAA00", "#FFD500", "#FFE24D", "#FFEE99", "#FFF8D6"] },
+      "ground": { "role": "neutral", "displayName": "Fond de route", "canonical": "#EDF1F6", "tonalRamp": ["#0A1220", "#243651", "#4A5568", "#657287", "#9DAABF", "#D3DAE5", "#EDF1F6", "#FFFFFF"] },
+      "ink": { "role": "neutral", "displayName": "Encre", "canonical": "#14181F", "tonalRamp": ["#14181F", "#2B3340", "#4A5568", "#657287", "#9DAABF", "#D3DAE5", "#EDF1F6", "#FFFFFF"] },
+      "ok": { "role": "state", "displayName": "Vert validé", "canonical": "#0B7A43", "tonalRamp": ["#04301B", "#075A31", "#0B7A43", "#2E9E63", "#4ED38B", "#8FE3B5", "#C5F0D8", "#E1F4EA"] },
+      "warn": { "role": "state", "displayName": "Ambre d'attention", "canonical": "#7A5200", "tonalRamp": ["#2F2508", "#4F3600", "#7A5200", "#B07A0A", "#F2C14E", "#F7D888", "#FFF1BF", "#FFF8DD"] },
+      "danger": { "role": "state", "displayName": "Rouge d'erreur", "canonical": "#B3261E", "tonalRamp": ["#34161A", "#6E1712", "#B3261E", "#D8524A", "#FF8A80", "#FFB4AD", "#FDEAE8", "#FFF5F4"] }
+    },
+    "typographyMeta": {
+      "headline-1": { "displayName": "Titre de page", "purpose": "Titre de chaque page, Barlow Semi Condensed 700." },
+      "match-score": { "displayName": "Score", "purpose": "Le match en distance, liste (28px) et détail (52px)." },
+      "body": { "displayName": "Texte", "purpose": "Texte courant Barlow 16px, chiffres tabulaires." }
+    },
+    "shadows": [
+      { "name": "ambient", "value": "0 1px 2px rgb(0 0 0 / .08), 0 4px 12px rgb(0 0 0 / .06)", "purpose": "Feuilles, barre de recherche, détail." },
+      { "name": "pop", "value": "0 2px 4px rgb(0 0 0 / .12), 0 8px 20px rgb(0 0 0 / .16)", "purpose": "Menu de compte, dialogues, toasts. Remplacée par un trait fin en sombre." }
+    ],
+    "motion": [
+      { "name": "ease", "value": "cubic-bezier(.16,1,.3,1)", "purpose": "Courbe unique des animations." },
+      { "name": "enter", "value": ".5s, délai 45ms x rang", "purpose": "Cascade des lignes de résultats, seule animation d'ensemble." },
+      { "name": "pop", "value": ".14s", "purpose": "Ouverture du menu de compte." }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "1000px" },
+      { "name": "phone", "value": "720px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action principale (Rechercher).",
+      "html": "<button class=\"ds-btn\">Rechercher</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:8px;border:1.5px solid #0B4F9C;background:#0B4F9C;color:#fff;font:600 16px Barlow,system-ui,sans-serif;cursor:pointer}.ds-btn:hover{filter:brightness(1.1)}.ds-btn:focus-visible{outline:3px solid #0B4F9C;outline-offset:2px;border-radius:4px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Action secondaire sur fond blanc.",
+      "html": "<button class=\"ds-btn-2\">Annuler</button>",
+      "css": ".ds-btn-2{min-height:44px;padding:0 18px;border-radius:8px;border:1.5px solid #9DAABF;background:#fff;color:#14181F;font:600 16px Barlow,system-ui,sans-serif;cursor:pointer}.ds-btn-2:hover{background:#E4EDF8}.ds-btn-2:focus-visible{outline:3px solid #0B4F9C;outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Champ 44px avec focus bleu.",
+      "html": "<input class=\"ds-input\" placeholder=\"Poste\">",
+      "css": ".ds-input{width:100%;min-height:44px;background:#fff;color:#14181F;border:1.5px solid #9DAABF;border-radius:8px;padding:8px 12px;font:16px Barlow,system-ui,sans-serif}.ds-input::placeholder{color:#657287}.ds-input:focus-visible{outline:3px solid #0B4F9C;outline-offset:0;border-color:#0B4F9C}"
+    },
+    {
+      "name": "App Bar",
+      "kind": "nav",
+      "refersTo": "app-bar",
+      "description": "Panneau bleu profond, onglet courant souligné de jaune.",
+      "html": "<div class=\"ds-bar\"><span class=\"ds-brand\">JobRadar</span><a class=\"ds-tab\" aria-current=\"page\" href=\"#\">Recherche</a><a class=\"ds-tab\" href=\"#\">Mon profil</a></div>",
+      "css": ".ds-bar{display:flex;align-items:stretch;gap:24px;height:60px;padding:0 24px;background:#08397A;color:#fff}.ds-brand{display:flex;align-items:center;font:700 22px 'Barlow Semi Condensed',Barlow,sans-serif}.ds-tab{display:inline-flex;align-items:center;padding:0 14px;color:#D3E2F5;text-decoration:none;font:600 17px 'Barlow Semi Condensed',Barlow,sans-serif;border-top:4px solid transparent;border-bottom:4px solid transparent}.ds-tab:hover{color:#fff}.ds-tab[aria-current=page]{color:#fff;border-bottom-color:#FFD500}.ds-tab:focus-visible{outline:3px solid #FFD500;outline-offset:2px}"
+    },
+    {
+      "name": "Source Chip",
+      "kind": "chip",
+      "refersTo": "source-chip",
+      "description": "Filtre de site avec pastille ronde d'initiales.",
+      "html": "<label class=\"ds-chip\"><span class=\"ds-roundel\">IN</span>Indeed</label>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 8px;border:1.5px solid #9DAABF;border-radius:999px;background:#fff;color:#14181F;font:500 16px Barlow,sans-serif;cursor:pointer}.ds-chip:hover{border-color:#0B4F9C}.ds-roundel{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #0B4F9C;background:#fff;color:#0B4F9C;font:700 12px 'Barlow Semi Condensed',Barlow,sans-serif}"
+    },
+    {
+      "name": "Match Sign",
+      "kind": "custom",
+      "refersTo": "match-strong",
+      "description": "Signature : le match en distance, plein / contour / pointillé.",
+      "html": "<span class=\"ds-match s\">86<small>%</small></span> <span class=\"ds-match m\">58<small>%</small></span> <span class=\"ds-match l\">31<small>%</small></span>",
+      "css": ".ds-match{display:inline-flex;align-items:baseline;justify-content:center;gap:2px;min-width:64px;height:48px;padding:0 10px;border-radius:6px;font:700 28px/48px 'Barlow Semi Condensed',Barlow,sans-serif;box-sizing:border-box}.ds-match small{font:700 13px 'Barlow Semi Condensed',Barlow,sans-serif}.ds-match.s{background:#0B4F9C;color:#fff;outline:1.5px solid rgb(255 255 255 / .85);outline-offset:-4px}.ds-match.m{background:#fff;color:#0B4F9C;border:2.5px solid #0B4F9C}.ds-match.l{background:transparent;color:#4A5568;border:2px dashed #9DAABF}"
+    },
+    {
+      "name": "Result Row",
+      "kind": "card",
+      "refersTo": "result-row",
+      "description": "Ligne de liste : pastille, titre, entreprise, panneau de match.",
+      "html": "<button class=\"ds-row\"><span class=\"ds-rd\">IN</span><span><b>Développeur web</b><span class=\"ds-sub\">Entreprise · Lyon</span></span><span class=\"ds-sc\">86%</span></button>",
+      "css": ".ds-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:14px;align-items:center;width:400px;min-height:76px;padding:12px 12px 12px 14px;background:#fff;border:1px solid #D3DAE5;border-radius:8px;text-align:left;font:16px Barlow,sans-serif;color:#14181F;cursor:pointer}.ds-row:hover{border-color:#9DAABF}.ds-row b{display:block;font:600 17px/1.25 Barlow,sans-serif}.ds-sub{display:block;font-size:14px;color:#4A5568}.ds-rd{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #0B4F9C;color:#0B4F9C;font:700 12px 'Barlow Semi Condensed',sans-serif}.ds-sc{background:#0B4F9C;color:#fff;border-radius:6px;padding:0 10px;font:700 28px/48px 'Barlow Semi Condensed',sans-serif}.ds-row:focus-visible{outline:3px solid #0B4F9C;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Le panneau de direction",
+    "overview": "JobRadar se lit comme un panneau de direction français : chaque offre est une destination, et la distance affichée est le match avec le profil. Mode Operate, pensé pour trier des dizaines d'offres en quelques secondes. Barre d'application en panneau bleu, sources en pastilles rondes, jaune de balisage réservé à la sélection et au focus.\n\nSystème plat et dense : la hiérarchie vient du lettrage (Barlow Semi Condensed gras, Barlow, chiffres tabulaires) et de la forme des panneaux de score (plein, contour, pointillé). Le mode sombre est un marine nocturne de même logique.",
+    "keyCharacteristics": [
+      "Bleu de panneau pour la barre et les états forts, jaune uniquement pour sélection et focus.",
+      "Le score est un panneau : plein (proche), contour (moyen), pointillé (loin), pointillé fin (aucun).",
+      "Pastilles rondes pour les sources, pilules pour les filtres.",
+      "Colonne centrée de 1120 px, liste de 400 px et détail collant.",
+      "Clair et sombre via prefers-color-scheme, cibles de 44 px, focus visible de 3 px."
+    ],
+    "rules": [
+      { "name": "The Yellow Is Selection Rule", "body": "Le jaune n'apparaît que pour la sélection et le focus (onglet courant, pastille de ligne courante, anneau de focus sur fond bleu ou sombre). Jamais en décor, jamais sur un bouton.", "section": "colors" },
+      { "name": "The Shape Before Color Rule", "body": "Un palier de score ne repose jamais sur la couleur seule : plein, contour, pointillé portent l'information.", "section": "colors" },
+      { "name": "The Score Is Condensed Rule", "body": "Tout chiffre de score ou de distance est en Barlow Semi Condensed gras ; le texte courant reste en Barlow.", "section": "typography" },
+      { "name": "The One Float Rule", "body": "Une fenêtre flottante porte soit une ombre (clair), soit un trait fin (sombre), jamais les deux.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do réserver le jaune #FFD500 à la sélection et au focus.",
+      "Do doubler chaque palier de score par une forme (plein, contour, pointillé).",
+      "Do garder les cibles à 44px et un anneau de focus de 3px visible en clair comme en sombre.",
+      "Do servir les polices et les icônes depuis l'application (CSP stricte, aucun style en ligne, icônes SVG en trait de 1.75).",
+      "Do utiliser les variables de :root plutôt que des valeurs en dur."
+    ],
+    "donts": [
+      "Don't revenir au tableau de bord de cartes identiques avec badge vert.",
+      "Don't utiliser le jaune comme couleur d'action ou de décor.",
+      "Don't cumuler ombre et trait sur une fenêtre flottante en sombre.",
+      "Don't charger de police ou de bibliothèque externe.",
+      "Don't ajouter d'animation d'ensemble autre que la cascade des résultats et le pop du menu."
+    ]
+  }
+}

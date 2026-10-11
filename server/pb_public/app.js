@@ -1,4 +1,5 @@
-import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel } from './lib.js?v=__V__'
+import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo } from './lib.js?v=__V__'
+import { ic } from './icons.js?v=__V__'
 import * as search from './search.js?v=__V__'
 import * as profileView from './profile.js?v=__V__'
 import * as settings from './settings.js?v=__V__'
@@ -10,6 +11,9 @@ async function start() {
   $('#login').hidden = authed
   $('#app').hidden = !authed
   if (authed) return enter()
+  $('#login').innerHTML = `<div class="login"><div class="head">${ic('radar')}<span>JobRadar</span></div>
+    <div class="body"><div class="stack"><h1>Se connecter</h1><p class="muted">Trouvez des offres et sachez, pour chacune, comment adapter votre CV.</p></div>
+    <div class="stack" id="providers"></div><p class="muted small" id="loginMsg" role="status"></p></div></div>`
   try {
     const { oauth2 } = await pb.collection('users').listAuthMethods()
     $('#providers').innerHTML = oauth2.providers.map((p) => `<button class="btn secondary" data-p="${esc(p.name)}">Continuer avec ${esc(p.displayName)}</button>`).join('')
@@ -22,6 +26,7 @@ async function start() {
 }
 
 async function enter() {
+  $('#brand').innerHTML = `${ic('radar')}<span>JobRadar</span>`
   try {
     const [{ providers }, key] = await Promise.all([call('providers'), call('status')])
     state.providers = providers; state.key = key
@@ -30,12 +35,38 @@ async function enter() {
   route()
 }
 
+// Barre d'application : bouton « Terminer la configuration » tant qu'il manque l'IA ou le CV, et menu de compte.
 function chrome() {
-  const k = state.key, p = profile()
-  $('#chips').innerHTML =
-    (k.has_key ? `<a class="chip ok" href="#/settings">IA : ${esc(providerLabel(k.provider))}</a>` : `<a class="chip warn" href="#/settings">IA non configurée</a>`) +
-    (p?.verifie ? `<a class="chip ok" href="#/profile">Profil validé</a>` : hasProfile() ? `<a class="chip warn" href="#/profile">Profil à vérifier</a>` : `<a class="chip warn" href="#/profile">Profil vide</a>`)
+  const u = pb.authStore.record || {}, todo = setupTodo(), name = u.name || u.email || 'Compte'
+  const initials = name.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('') || '?'
+  const p = profile(), k = state.key
+  const profTag = p?.verifie ? '<span class="tag ok">Validé</span>' : hasProfile() ? '<span class="tag warn">À vérifier</span>' : '<span class="tag warn">Vide</span>'
+  const iaTag = k.has_key ? `<span class="tag ok">IA · ${esc(providerLabel(k.provider))}</span>` : '<span class="tag warn">IA à configurer</span>'
+  $('#end').innerHTML = `${todo.length ? `<a class="setup" href="${todo[0].to}">${ic('alert')}<span>Terminer la configuration</span></a>` : ''}
+    <div class="acct"><button class="avatar" id="acctBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu" aria-label="Menu du compte de ${esc(name)}">${esc(initials)}</button>
+      <div class="menu" id="acctMenu" role="menu" aria-label="Compte" hidden>
+        <div class="who"><b>${esc(name)}</b><span class="muted small">Connecté</span></div>
+        <a role="menuitem" href="#/profile">${ic('user')}Mon profil ${profTag}</a>
+        <a role="menuitem" href="#/settings">${ic('settings')}Paramètres ${iaTag}</a>
+        <div class="sep" role="separator"></div>
+        <button role="menuitem" id="logoutBtn">${ic('logout')}Se déconnecter</button>
+      </div></div>`
+  const btn = $('#acctBtn'), menu = $('#acctMenu')
+  const items = () => $$('[role=menuitem]', menu)
+  const close = (focus) => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (focus) btn.focus() }
+  const open = () => { menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); items()[0].focus() }
+  btn.onclick = () => (menu.hidden ? open() : close())
+  menu.onclick = (e) => { if (e.target.closest('a')) close() }
+  menu.onkeydown = (e) => {
+    const list = items(), i = list.indexOf(document.activeElement)
+    if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length].focus() }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus() }
+    else if (e.key === 'Escape') { e.preventDefault(); close(true) }
+    else if (e.key === 'Tab') close()
+  }
+  $('#logoutBtn').onclick = () => { pb.authStore.clear(); location.hash = ''; location.reload() }
 }
+document.addEventListener('click', (e) => { const m = $('#acctMenu'); if (m && !m.hidden && !e.target.closest('.acct')) { m.hidden = true; $('#acctBtn').setAttribute('aria-expanded', 'false') } })
 bus.addEventListener('chrome', chrome)
 
 function route() {
@@ -46,12 +77,12 @@ function route() {
   const root = $('#view')
   root.oninput = root.onchange = root.onclick = null
   view.render(root)
-  document.title = 'JobRadar'
+  window.scrollTo(0, 0)
 }
 
-// Garde-fou : quitter le profil avec des modifications non enregistrées demande confirmation.
+// Quitter le profil avec des modifications non enregistrées demande confirmation.
 let lastHash = location.hash
-window.addEventListener('hashchange', (e) => {
+window.addEventListener('hashchange', () => {
   if (lastHash.startsWith('#/profile') && !location.hash.startsWith('#/profile') && profileView.isDirty() && !confirm('Des modifications du profil ne sont pas enregistrées. Quitter quand même ?')) {
     location.hash = lastHash; return
   }

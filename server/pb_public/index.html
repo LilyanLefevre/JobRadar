@@ -3,26 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>JobRadar</title>
 <link rel="stylesheet" href="style.css?v=__V__">
 </head>
 <body>
-<div id="login" hidden>
-  <div class="brand">Job<span>Radar</span></div>
-  <p class="muted">Trouvez des offres et sachez, pour chacune, comment adapter votre CV.</p>
-  <div id="providers"></div>
-  <p class="muted small" id="loginMsg" role="status"></p>
-</div>
+<div id="login" hidden></div>
 
 <div id="app" hidden>
-  <header class="top"><div class="in">
-    <a class="brand" href="#/search" aria-label="JobRadar, accueil">Job<span>Radar</span></a>
-    <nav aria-label="Navigation principale">
+  <header class="appbar"><div class="in">
+    <a class="brand" href="#/search" id="brand"></a>
+    <nav class="tabs" aria-label="Navigation principale">
       <a href="#/search" data-nav="search">Recherche</a>
       <a href="#/profile" data-nav="profile">Mon profil</a>
-      <a href="#/settings" data-nav="settings">Paramètres</a>
     </nav>
-    <div class="chips" id="chips"></div>
+    <div class="end" id="end"></div>
   </div></header>
   <main id="view"></main>
 </div>

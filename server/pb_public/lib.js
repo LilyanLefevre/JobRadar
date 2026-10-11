@@ -18,6 +18,14 @@ export const profile = () => pb.authStore.record?.profile || null
 export const hasProfile = (p = profile()) => !!(p && ((p.experiences || []).length || (p.formations || []).length || (p.competences || []).length || (p.resume || '').trim()))
 export const providerLabel = (id) => state.providers.find((p) => p.id === id)?.label || id
 export const canEvaluate = () => state.key.has_key && hasProfile()
+export const SITE = { indeed: 'In', hellowork: 'HW', linkedin: 'Li', glassdoor: 'Gl' }
+export const SITE_NAME = { indeed: 'Indeed', hellowork: 'HelloWork', linkedin: 'LinkedIn', glassdoor: 'Glassdoor' }
+export const tier = (n) => (n == null ? 'none' : n >= 70 ? 'strong' : n >= 45 ? 'mid' : 'low')
+// Ce qu'il manque pour activer les scores (sert au bandeau, à la fenêtre de suggestion et au bouton de la barre).
+export const setupTodo = () => [
+  ...(state.key.has_key ? [] : [{ what: 'Configurer votre IA', why: 'pour obtenir les scores et les conseils', to: '#/settings' }]),
+  ...(hasProfile() ? [] : [{ what: 'Ajouter votre CV', why: 'pour comparer votre profil aux offres', to: '#/profile' }]),
+]
 
 export async function call(path, method = 'GET', body) {
   const r = await fetch('/jr/' + path, {
