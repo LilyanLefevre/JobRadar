@@ -1,4 +1,4 @@
-import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo, openDialog } from './lib.js?v=__V__'
+import { pb, $, $$, esc, call, state, bus, toast, hasProfile, profile, providerLabel, setupTodo, openDialog, avatarHtml, bindAvatars } from './lib.js?v=__V__'
 import { ic } from './icons.js?v=__V__'
 import * as search from './search.js?v=__V__'
 import * as profileView from './profile.js?v=__V__'
@@ -42,21 +42,21 @@ async function enter() {
 // Barre d'application : bouton « Terminer la configuration » tant qu'il manque l'IA ou le CV, et menu de compte.
 function chrome() {
   const u = pb.authStore.record || {}, todo = setupTodo(), name = u.name || u.email || 'Compte'
-  const initials = name.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('') || '?'
   const p = profile(), k = state.key
   const profTag = p?.verifie ? '<span class="tag ok">Validé</span>' : hasProfile() ? '<span class="tag warn">À vérifier</span>' : '<span class="tag warn">Vide</span>'
   const n = (k.providers || []).length
   const iaTag = k.has_key ? `<span class="tag ok">IA · ${esc(providerLabel(k.provider))}${n > 1 ? ` +${n - 1}` : ''}</span>` : '<span class="tag warn">IA à configurer</span>'
   $('#end').innerHTML = `${todo.length ? `<a class="setup" href="${todo[0].to}">${ic('alert')}<span>Terminer la configuration</span></a>` : ''}
-    <div class="acct"><button class="avatar" id="acctBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu" aria-label="Menu du compte de ${esc(name)}">${esc(initials)}</button>
+    <div class="acct"><button class="avatar" id="acctBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="acctMenu" aria-label="Menu du compte de ${esc(name)}">${avatarHtml(36)}</button>
       <div class="menu" id="acctMenu" role="menu" aria-label="Compte" hidden>
-        <div class="who"><b>${esc(name)}</b><span class="muted small">Connecté</span></div>
+        <div class="who">${avatarHtml(96, "lg")}<div><b>${esc(name)}</b><span class="muted small">Connecté</span></div></div>
         <a role="menuitem" href="#/profile">${ic('user')}Mon profil ${profTag}</a>
         <a role="menuitem" href="#/settings">${ic('settings')}Paramètres ${iaTag}</a>
         ${pwa.installable() ? `<button role="menuitem" id="installBtn">${ic('download')}Installer l'application</button>` : ''}
         <div class="sep" role="separator"></div>
         <button role="menuitem" id="logoutBtn">${ic('logout')}Se déconnecter</button>
       </div></div>`
+  bindAvatars($('#end'))
   const btn = $('#acctBtn'), menu = $('#acctMenu')
   const items = () => $$('[role=menuitem]', menu)
   const close = (focus) => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (focus) btn.focus() }

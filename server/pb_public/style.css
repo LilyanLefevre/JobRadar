@@ -337,3 +337,15 @@ ol.steps .ic{vertical-align:-4px}
 @media (max-width:720px){.installbar .in{padding:10px 16px;flex-wrap:wrap;gap:8px 12px}.installbar p{flex:1 1 calc(100% - 40px)}.installbar .row{margin-left:36px}}
 
 nav.tabs a{white-space:nowrap}
+
+/* Photo du compte */
+.pic{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;background:var(--blue-weak);color:var(--ink);font:700 15px var(--sign);text-transform:uppercase}
+.pic img{display:block;width:100%;height:100%;object-fit:cover}
+.pic.lg{width:44px;height:44px;font-size:17px}.pic.xl{width:88px;height:88px;font-size:30px}
+.avatar{padding:0;overflow:hidden;background:rgb(255 255 255 / .12)}.avatar .pic{width:100%;height:100%;background:transparent;color:var(--on-blue)}
+.menu .who{display:flex;align-items:center;gap:12px}.menu .who b{display:block}
+.whoami{display:flex;align-items:center;gap:14px}.whoami p{margin:0}
+.idblock{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:720px){.idblock{grid-template-columns:1fr}}
+
+@media (min-width:721px){.idblock .pic{margin-top:22px}}
