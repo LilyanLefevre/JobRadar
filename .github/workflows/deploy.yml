@@ -4,6 +4,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md', '.impeccable/**', 'tests/**', '.github/dependabot.yml'] # la documentation ne redéploie pas
 
 permissions:
   contents: read
