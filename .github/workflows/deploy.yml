@@ -1,6 +1,6 @@
 name: Deploy
 
-# Construit l'image arm64 + amd64, la publie, puis le runner du Raspberry Pi redéploie.
+# Construit les images arm64 + amd64, les publie, puis le runner auto-hébergé redéploie.
 on:
   push:
     branches: [main]
@@ -12,6 +12,11 @@ permissions:
 jobs:
   image:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { context: server, tag: jobradar }
+          - { context: worker, tag: jobradar-worker }
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -23,17 +28,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/lilyanlefevre/jobradar:latest
+          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.tag }}:latest
 
   deploy:
     needs: image
-    runs-on: self-hosted # runner du Pi (connexion sortante uniquement)
+    runs-on: self-hosted # runner de la machine hôte (connexion sortante uniquement)
     steps:
       - run: |
           cd "$HOME/JobRadar"
           git pull --ff-only
-          docker compose --profile tunnel up -d --pull always
+          docker compose up -d --pull always # le profil "tunnel" s'active avec COMPOSE_PROFILES dans .env
           docker image prune -f

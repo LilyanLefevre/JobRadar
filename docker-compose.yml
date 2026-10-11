@@ -1,15 +1,31 @@
 services:
-  jobradar:
+  # PocketBase: comptes (OAuth2), CV, routes /jr/*, interface.
+  app:
     image: ${JOBRADAR_IMAGE:-ghcr.io/lilyanlefevre/jobradar:latest}
-    build: .
+    build: server
     restart: unless-stopped
-    env_file: .env # CLAUDE_CODE_OAUTH_TOKEN (claude setup-token), CLOUDFLARED_TOKEN
+    environment:
+      WORKER_URL: http://worker:5055
+      WORKER_SECRET: ${WORKER_SECRET:?set WORKER_SECRET in .env}
     ports:
-      - "${JOBRADAR_BIND:-127.0.0.1}:5055:5055"
+      - "${JOBRADAR_BIND:-127.0.0.1}:8090:8090"
     volumes:
-      - ./data:/data # cv.md
+      - ./pb_data:/pb/pb_data # comptes, CV, clés API chiffrées: à sauvegarder
+    depends_on:
+      - worker
 
-  # Optionnel: tunnel Cloudflare (profil "tunnel"), route configurée dans le tableau de bord Cloudflare vers http://jobradar:5055
+  # JobSpy + évaluation Claude. Réseau interne uniquement.
+  worker:
+    image: ${JOBRADAR_WORKER_IMAGE:-ghcr.io/lilyanlefevre/jobradar-worker:latest}
+    build: worker
+    restart: unless-stopped
+    environment:
+      WORKER_SECRET: ${WORKER_SECRET:?set WORKER_SECRET in .env}
+      SECRETS_KEY: ${SECRETS_KEY:?set SECRETS_KEY in .env}
+      JOBRADAR_MODEL: ${JOBRADAR_MODEL:-claude-opus-5-5}
+      SEARCHES_PER_DAY: ${SEARCHES_PER_DAY:-10}
+
+  # Optionnel: tunnel Cloudflare (profil "tunnel"); route à créer dans le tableau de bord Cloudflare vers http://app:8090
   cloudflared:
     image: cloudflare/cloudflared:latest
     profiles: ["tunnel"]
@@ -18,4 +34,4 @@ services:
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN in .env}
     depends_on:
-      - jobradar
+      - app

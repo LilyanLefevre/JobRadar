@@ -8,7 +8,9 @@
 :root{--bg:#0e1116;--panel:#161b22;--line:#252c36;--text:#e6e9ee;--mute:#8b95a5;--acc:#6ee7b7;--bad:#f87171;--mid:#fbbf24}
 @media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6ea;--text:#14181f;--mute:#667085;--acc:#0f9d6e;--bad:#dc2626;--mid:#d97706}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,sans-serif;display:grid;grid-template-columns:320px 380px 1fr;height:100vh}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,sans-serif}
+#app{display:grid;grid-template-columns:320px 380px 1fr;height:100vh}
 aside,section,main{overflow:auto;padding:18px;border-right:1px solid var(--line)}
 main{border:0}
 h1{font-size:18px;margin:0 0 14px;letter-spacing:-.02em}
@@ -16,7 +18,7 @@ h1 span{color:var(--acc)}
 h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);margin:20px 0 8px}
 label{display:block;font-size:12px;color:var(--mute);margin:10px 0 4px}
 input,textarea,select{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit}
-textarea{height:200px;resize:vertical;font-size:12px}
+textarea{height:180px;resize:vertical;font-size:12px}
 input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
 .row{display:flex;gap:8px}.row>*{flex:1}
 .chk{display:flex;gap:12px;margin-top:8px}.chk label{display:flex;gap:4px;align-items:center;margin:0;color:var(--text)}.chk input{width:auto}
@@ -38,16 +40,41 @@ ul{margin:4px 0;padding-left:18px}
 a{color:var(--acc)}
 .mute{color:var(--mute)}
 details{margin-top:14px}pre{white-space:pre-wrap;font:12px/1.5 inherit;color:var(--mute)}
-@media(max-width:1000px){body{display:block;height:auto}}
+#login{max-width:380px;margin:12vh auto;padding:0 18px;text-align:center}
+#login button{margin-top:10px}
+.who{display:flex;justify-content:space-between;align-items:center;color:var(--mute);font-size:12px;margin-bottom:6px}
+.who a{cursor:pointer}
+@media(max-width:1000px){#app{display:block;height:auto}}
 </style>
 </head>
 <body>
+<div id="login" hidden>
+  <h1>Job<span>Radar</span></h1>
+  <p class="mute">Cherchez des offres et faites évaluer votre CV par Claude pour chacune.</p>
+  <div id="providers"></div>
+  <p class="mute" id="loginMsg"></p>
+</div>
+
+<div id="app" hidden>
 <aside>
   <h1>Job<span>Radar</span></h1>
+  <div class="who"><span id="who"></span><a id="logout">Déconnexion</a></div>
+
+  <h2>Clé API Anthropic</h2>
+  <p class="mute" id="keyState"></p>
+  <input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
+  <div class="row"><button class="ghost" id="saveKey">Enregistrer</button><button class="ghost" id="delKey">Supprimer</button></div>
+  <p class="mute" style="font-size:12px">Créez-la sur console.anthropic.com. Elle est vérifiée puis stockée chiffrée, et sert uniquement à vos évaluations (facturées sur votre compte Anthropic).</p>
+
+  <h2>Mon CV (texte / markdown)</h2>
+  <textarea id="cv" placeholder="Collez votre CV ici"></textarea>
+  <button class="ghost" id="saveCv">Enregistrer le CV</button>
+
+  <h2>Recherche</h2>
   <label>Poste</label><input id="q" placeholder="développeur web">
   <label>Lieu</label><input id="loc" placeholder="Lyon, France">
   <div class="row">
-    <div><label>Résultats / site</label><input id="n" type="number" value="15" min="1" max="50"></div>
+    <div><label>Résultats / site</label><input id="n" type="number" value="10" min="1" max="20"></div>
     <div><label>Âge max</label><select id="hours"><option value="24">24 h</option><option value="72">3 j</option><option value="168" selected>7 j</option><option value="720">30 j</option></select></div>
   </div>
   <div class="chk">
@@ -55,40 +82,84 @@ details{margin-top:14px}pre{white-space:pre-wrap;font:12px/1.5 inherit;color:var
     <label><input type="checkbox" class="site" value="linkedin" checked>LinkedIn</label>
     <label><input type="checkbox" class="site" value="glassdoor">Glassdoor</label>
   </div>
-  <h2>Mon CV (texte / markdown)</h2>
-  <textarea id="cv" placeholder="Collez votre CV ici"></textarea>
-  <button class="ghost" id="saveCv">Enregistrer le CV</button>
   <button id="go">Chercher et évaluer</button>
   <p class="mute" id="status"></p>
 </aside>
 <section id="list"><p class="mute">Lancez une recherche.</p></section>
 <main id="detail"><p class="mute">Sélectionnez une offre.</p></main>
+</div>
 
+<script src="pocketbase.umd.js"></script>
 <script>
+const pb = new PocketBase(location.origin);
 const $ = s => document.querySelector(s);
 const jobs = {};
 let selected = null;
 const cls = n => n >= 70 ? 'hi' : n >= 45 ? 'md' : 'lo';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const api = (u, m, b) => fetch(u, {method: m, headers: {'Content-Type': 'application/json'}, body: b && JSON.stringify(b)}).then(r => r.json());
+const status = t => $('#status').textContent = t;
 
-fetch('/api/cv').then(r => r.json()).then(d => $('#cv').value = d.cv);
-$('#saveCv').onclick = async () => { await api('/api/cv', 'PUT', {cv: $('#cv').value}); $('#status').textContent = 'CV enregistré.'; };
+async function call(path, method = 'GET', body) {
+  const r = await fetch('/jr/' + path, {method, body: body && JSON.stringify(body),
+    headers: {'Content-Type': 'application/json', Authorization: pb.authStore.token}});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || j.message || 'Erreur ' + r.status);
+  return j;
+}
+
+async function start() {
+  const authed = pb.authStore.isValid && await pb.collection('users').authRefresh().then(() => true, () => false);
+  $('#login').hidden = authed;
+  $('#app').hidden = !authed;
+  if (authed) return enter();
+  try {
+    const {oauth2} = await pb.collection('users').listAuthMethods();
+    $('#providers').innerHTML = oauth2.providers.map(p => `<button data-p="${esc(p.name)}">Continuer avec ${esc(p.displayName)}</button>`).join('');
+    if (!oauth2.providers.length) $('#loginMsg').textContent = "Aucun fournisseur de connexion n'est configuré.";
+    document.querySelectorAll('#providers button').forEach(b => b.onclick = async () => {
+      try { await pb.collection('users').authWithOAuth2({provider: b.dataset.p}); start(); }
+      catch (e) { $('#loginMsg').textContent = 'Connexion impossible : ' + e.message; }
+    });
+  } catch (e) { $('#loginMsg').textContent = 'Serveur injoignable.'; }
+}
+
+async function enter() {
+  const u = pb.authStore.record;
+  $('#who').textContent = u.name || u.email || '';
+  $('#cv').value = u.cv || '';
+  keyState();
+}
+async function keyState() {
+  const {has_key} = await call('status');
+  $('#keyState').textContent = has_key ? '✓ Clé enregistrée.' : 'Aucune clé : ajoutez-la pour lancer les évaluations.';
+}
+
+$('#logout').onclick = () => { pb.authStore.clear(); start(); };
+$('#saveKey').onclick = async () => {
+  try { await call('key', 'POST', {key: $('#key').value}); $('#key').value = ''; keyState(); }
+  catch (e) { $('#keyState').textContent = e.message; }
+};
+$('#delKey').onclick = async () => { await call('key', 'DELETE'); keyState(); };
+$('#saveCv').onclick = async () => {
+  await pb.collection('users').update(pb.authStore.record.id, {cv: $('#cv').value});
+  status('CV enregistré.');
+};
 
 $('#go').onclick = async () => {
-  if (!$('#q').value.trim() || !$('#cv').value.trim()) return $('#status').textContent = 'Poste et CV requis.';
+  if (!$('#q').value.trim() || !$('#cv').value.trim()) return status('Poste et CV requis.');
   $('#go').disabled = true;
-  await api('/api/cv', 'PUT', {cv: $('#cv').value});
-  $('#status').textContent = 'Recherche en cours (30 s environ)…';
-  const res = await api('/api/search', 'POST', {
-    query: $('#q').value, location: $('#loc').value, n: $('#n').value, hours: $('#hours').value,
-    sites: [...document.querySelectorAll('.site:checked')].map(e => e.value)});
+  try {
+    await pb.collection('users').update(pb.authStore.record.id, {cv: $('#cv').value});
+    status('Recherche en cours (30 s environ)…');
+    const res = await call('search', 'POST', {
+      query: $('#q').value, location: $('#loc').value, n: $('#n').value, hours: $('#hours').value,
+      sites: [...document.querySelectorAll('.site:checked')].map(e => e.value)});
+    Object.keys(jobs).forEach(k => delete jobs[k]);
+    res.jobs.forEach(j => jobs[j.id] = j);
+    render();
+    await evaluateAll(res.jobs);
+  } catch (e) { status(e.message); }
   $('#go').disabled = false;
-  if (!res.jobs) return $('#status').textContent = 'Erreur de recherche.';
-  Object.keys(jobs).forEach(k => delete jobs[k]);
-  res.jobs.forEach(j => jobs[j.id] = j);
-  render();
-  evaluateAll(res.jobs);
 };
 
 async function evaluateAll(list) {
@@ -97,14 +168,13 @@ async function evaluateAll(list) {
   const worker = async () => {
     while (queue.length) {
       const j = queue.shift();
-      const r = await api('/api/evaluate', 'POST', j).catch(e => ({error: String(e)}));
-      jobs[j.id].ev = r;
-      $('#status').textContent = `Évaluation ${++done}/${list.length}`;
+      jobs[j.id].ev = await call('evaluate', 'POST', j).catch(e => ({error: e.message}));
+      status(`Évaluation ${++done}/${list.length}`);
       render();
     }
   };
   await Promise.all([worker(), worker(), worker()]);
-  $('#status').textContent = 'Terminé.';
+  status('Terminé.');
 }
 
 function render() {
@@ -113,8 +183,8 @@ function render() {
     <div class="job ${j.id === selected ? 'on' : ''}" data-id="${esc(j.id)}">
       <div class="score ${cls(j.ev?.match)}">${j.ev?.match ?? (j.ev?.error ? '!' : '…')}<i>match</i></div>
       <div><b>${esc(j.titre)}</b><small>${esc(j.entreprise)} · ${esc(j.lieu)} · ${esc(j.site)}</small></div>
-    </div>`).join('');
-  document.querySelectorAll('.job').forEach(e => e.onclick = () => { selected = e.dataset.id; render(); }) ;
+    </div>`).join('') || '<p class="mute">Aucune offre trouvée.</p>';
+  document.querySelectorAll('.job').forEach(e => e.onclick = () => { selected = e.dataset.id; render(); });
   if (selected) detail(jobs[selected]);
 }
 
@@ -134,10 +204,13 @@ function detail(j) {
     ${(e.modifs || []).map(m => `<div class="card"><b>${esc(m.section)}</b>
       <div class="diff"><p class="old">${esc(m.avant)}</p><p class="new">${esc(m.apres)}</p></div>
       <small class="mute">${esc(m.pourquoi)}</small></div>`).join('')}`;
+  const url = /^https?:\/\//.test(j.url) ? j.url : '#';
   $('#detail').innerHTML = `<h1>${esc(j.titre)}</h1>
-    <p class="mute">${esc(j.entreprise)} · ${esc(j.lieu)} · <a href="${esc(j.url)}" target="_blank" rel="noopener">Voir l'offre</a></p>
+    <p class="mute">${esc(j.entreprise)} · ${esc(j.lieu)} · <a href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre</a></p>
     ${body}<details><summary>Description de l'offre</summary><pre>${esc(j.description)}</pre></details>`;
 }
+
+start();
 </script>
 </body>
 </html>
