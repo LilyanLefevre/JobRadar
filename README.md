@@ -14,11 +14,15 @@ Application web multi-utilisateurs : connexion Google / GitHub, et **chaque util
 
 ## Fonctionnement
 
-1. L'utilisateur se connecte avec GitHub ou Google.
-2. Il choisit un fournisseur d'IA et colle sa clé API : elle est vérifiée, puis stockée chiffrée.
-3. Il colle son CV (texte ou markdown) et lance une recherche (poste, lieu, sites, ancienneté).
-4. Les offres arrivent, puis les évaluations se remplissent au fil de l'eau (3 en parallèle). La liste est triée par score de match.
-5. Pour chaque offre : scores, forces, manques et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
+L'interface a trois pages : **Recherche**, **Mon profil** et **Paramètres**.
+
+1. **Connexion** avec GitHub ou Google.
+2. **Paramètres** : l'utilisateur choisit un fournisseur d'IA et colle sa clé API (vérifiée, puis stockée chiffrée).
+3. **Mon profil** : il importe son CV en **PDF** (ou colle son texte, ou remplit à la main). Le texte est extrait puis structuré par son IA. Il **vérifie et corrige** ensuite chaque information : identité, expériences (avec leur *catégorie* : emploi, stage, alternance, freelance, projet, bénévolat), formations, compétences classées par catégorie, langues et critères de recherche (postes visés, contrats, lieux, télétravail, niveau). Le PDF n'est pas conservé ; l'utilisateur n'écrit jamais de fichier markdown.
+4. **Recherche** : poste, lieu, sites, ancienneté (préremplis depuis le profil). Les offres arrivent, puis les évaluations se remplissent au fil de l'eau, triées par score de match.
+5. Pour chaque offre : scores (match profil/offre et qualité du CV pour cette offre), forces, points à renforcer, et modifications proposées en « avant / après » avec la raison. L'utilisateur reste libre de les appliquer ou non.
+
+**Sans configuration, la recherche fonctionne quand même** : si l'IA ou le profil manque, une fenêtre propose de configurer (ou de chercher sans scores). Les offres s'affichent alors sans évaluation, et chacune peut être évaluée plus tard.
 
 ## Architecture
 
@@ -42,8 +46,8 @@ flowchart LR
 
 | Composant | Rôle |
 |---|---|
-| **app** (`server/`) | PocketBase : connexion OAuth2, stockage du CV, limitation de débit, en-têtes de sécurité, interface web statique et routes `/jr/*`. C'est la seule porte d'entrée. |
-| **worker** (`worker/`) | Service Python interne : recherche d'offres (JobSpy), vérification et chiffrement des clés, évaluation par le fournisseur d'IA choisi. N'accepte que les appels de l'app (secret partagé). |
+| **app** (`server/`) | PocketBase : connexion OAuth2, stockage du profil, limitation de débit, en-têtes de sécurité, interface web statique (modules JS sans build) et routes `/jr/*`. C'est la seule porte d'entrée. |
+| **worker** (`worker/`) | Service Python interne : recherche d'offres (JobSpy), vérification et chiffrement des clés, extraction du texte des PDF (pypdf) et structuration du CV, évaluation par le fournisseur d'IA choisi. N'accepte que les appels de l'app (secret partagé). |
 | **cloudflared** | Optionnel : expose l'app sur Internet sans ouvrir de port. |
 
 ### Le parcours d'une évaluation
@@ -61,15 +65,22 @@ sequenceDiagram
     W-->>A: clé chiffrée (Fernet)
     A->>A: stocke dans « secrets » (aucun accès API)
 
+    U->>A: POST /jr/cv/import (PDF en base64 ou texte)
+    A->>W: /cv/extract (clé chiffrée)
+    W->>W: extrait le texte du PDF
+    W->>IA: structure le CV (JSON)
+    W-->>U: profil à vérifier et corriger
+    U->>A: enregistre le profil validé (users.profile)
+
     U->>A: POST /jr/search
     A->>W: /search (id utilisateur)
     W-->>U: offres (via app)
 
     loop pour chaque offre
         U->>A: POST /jr/evaluate (offre)
-        A->>W: /evaluate (clé chiffrée + CV + offre)
+        A->>W: /evaluate (clé chiffrée + profil + offre)
         W->>W: déchiffre la clé
-        W->>IA: prompt CV + offre
+        W->>IA: prompt profil + offre
         IA-->>W: JSON structuré
         W-->>U: scores + modifications
     end
@@ -203,9 +214,10 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ## Limites
 
 - Le scraping des job boards peut enfreindre leurs conditions d'utilisation et provoquer des blocages d'IP : volumes modestes, quota par utilisateur, inscription sur invitation recommandée.
-- Les résultats de recherche ne sont pas conservés (seuls le CV et la clé API le sont).
+- Les résultats de recherche ne sont pas conservés (seuls le profil et la clé API le sont).
+- L'import fonctionne sur les PDF contenant du texte (5 Mo et 15 pages maximum) ; un PDF scanné (image) n'est pas lu : collez le texte ou remplissez le profil. L'extraction par IA peut se tromper, d'où l'étape de vérification.
 - Les évaluations sont des suggestions d'une IA : relisez-les, elles peuvent se tromper. N'y laissez jamais inventer d'expérience.
-- Le CV est stocké en clair dans SQLite (pas de chiffrement au repos), contrairement aux clés API.
+- Le profil (données personnelles) est stocké en clair dans SQLite, sans chiffrement au repos, contrairement aux clés API. L'extraction demande à l'IA d'omettre e-mail, téléphone et adresse.
 
 ## Structure du dépôt
 
@@ -215,11 +227,11 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ├── .env.example              # modèle de configuration
 ├── server/                   # PocketBase
 │   ├── Dockerfile            # binaire vérifié par SHA-256, amd64 + arm64
-│   ├── pb_migrations/        # schéma : CV, secrets, fournisseur, limites de débit, règle d'inscription
+│   ├── pb_migrations/        # schéma : profil, secrets, fournisseur, limites de débit, règle d'inscription
 │   ├── pb_hooks/             # routes /jr/*, sécurité (en-têtes, admin, inscriptions)
-│   └── pb_public/            # interface (index.html, app.js, SDK PocketBase)
+│   └── pb_public/            # interface : index.html, style.css, app.js (routeur), search/profile/settings.js, SDK PocketBase
 ├── worker/                   # service Python interne
-│   ├── app.py                # recherche, chiffrement des clés, évaluation
+│   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation
 │   └── providers.json        # fournisseurs d'IA et modèles
 └── .github/                  # déploiement continu, Dependabot
 ```

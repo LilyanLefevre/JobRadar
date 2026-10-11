@@ -5,3 +5,4 @@ anthropic
 cryptography
 requests
 pydantic
+pypdf
