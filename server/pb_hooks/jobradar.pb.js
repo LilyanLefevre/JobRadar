@@ -95,30 +95,46 @@ routerAdd("POST", "/jr/cv/import", (e) => {
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))
 
+// Évaluations déjà en mémoire pour ces offres (null = à évaluer) : le client ne remplit ses lots qu'avec les inconnues.
+routerAdd("POST", "/jr/evaluate/lookup", (e) => {
+  const lib = require(`${__hooks}/lib.js`)
+  const jobs = e.requestInfo().body.jobs || []
+  const c = lib.evalCtx(e, jobs, "light")
+  if (c.error) return c.error
+  return e.json(200, { results: c.keys.map((k) => c.hits[k] || null) })
+}, $apis.requireAuth("users"))
+
 routerAdd("POST", "/jr/evaluate/batch", (e) => {
   const lib = require(`${__hooks}/lib.js`)
-  const rec = lib.secretOf($app, e.auth.id)
-  if (!rec) return e.json(400, { error: "Choisissez un fournisseur et ajoutez votre clé API." })
-  const r = lib.worker("/evaluate_batch", {
-    provider: rec.getString("provider"),
-    enc: rec.getString("api_key_enc"),
-    cv: e.auth.getString("cv"),
-    profile: JSON.parse(e.auth.getString("profile") || "null"),
-    jobs: e.requestInfo().body.jobs,
-  }, 240)
-  return e.json(r.statusCode, r.json)
+  const jobs = e.requestInfo().body.jobs || []
+  const c = lib.evalCtx(e, jobs, "light")
+  if (c.error) return c.error
+  const results = c.keys.map((k) => c.hits[k] || null)
+  const miss = results.map((r, i) => (r ? -1 : i)).filter((i) => i >= 0)
+  if (miss.length) {
+    const r = lib.worker("/evaluate_batch", { ...c.base, jobs: miss.map((i) => jobs[i]) }, 240)
+    if (r.statusCode !== 200) return e.json(r.statusCode, r.json)
+    miss.forEach((idx, n) => {
+      const res = r.json.results[n]
+      results[idx] = res
+      if (res) lib.cachePut($app, e.auth.id, c.keys[idx], "light", res)
+    })
+  }
+  return e.json(200, { results, cached: jobs.length - miss.length })
 }, $apis.requireAuth("users"))
 
 routerAdd("POST", "/jr/evaluate", (e) => {
   const lib = require(`${__hooks}/lib.js`)
-  const rec = lib.secretOf($app, e.auth.id)
-  if (!rec) return e.json(400, { error: "Choisissez un fournisseur et ajoutez votre clé API." })
-  const r = lib.worker("/evaluate", {
-    provider: rec.getString("provider"),
-    enc: rec.getString("api_key_enc"),
-    cv: e.auth.getString("cv"),
-    profile: JSON.parse(e.auth.getString("profile") || "null"),
-    job: e.requestInfo().body,
-  }, 240)
+  const job = e.requestInfo().body
+  const c = lib.evalCtx(e, [job], "full")
+  if (c.error) return c.error
+  if (c.hits[c.keys[0]]) return e.json(200, { ...c.hits[c.keys[0]], cached: true })
+  const r = lib.worker("/evaluate", { ...c.base, job }, 240)
+  if (r.statusCode === 200) lib.cachePut($app, e.auth.id, c.keys[0], "full", r.json)
   return e.json(r.statusCode, r.json)
 }, $apis.requireAuth("users"))
+
+// Purge quotidienne : les évaluations de plus de 30 jours sont oubliées.
+cronAdd("evalCachePurge", "17 4 * * *", () => {
+  $app.db().newQuery("DELETE FROM eval_cache WHERE created < datetime('now','-30 day')").execute()
+})

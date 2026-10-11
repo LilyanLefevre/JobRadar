@@ -74,34 +74,47 @@ async function runSearch() {
   const go = $('#go'); if (go) go.disabled = false
 }
 
-// Une requête d'IA par lot de 8 offres (et non par offre) : le profil n'est envoyé qu'une fois, les limites des offres gratuites tiennent.
+// Mémoire d'abord (une offre déjà évaluée pour ce profil n'est pas repayée), puis un appel d'IA par lot d'offres inconnues.
+// La taille du lot dépend du fournisseur (providers.json) : grande pour les modèles à long contexte, petite pour les offres gratuites limitées.
 const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`
-const BATCH = 8
+const slim = (j) => ({ site: j.site, url: j.url, titre: j.titre, entreprise: j.entreprise, lieu: j.lieu, description: (j.description || '').slice(0, 1500) })
+const batchSize = () => state.providers.find((p) => p.id === state.key.provider)?.batch || 8
+
 async function evaluateAll(list) {
   const todo = list.filter((j) => !j.ev && !j.evaluating)
-  const chunks = []
-  for (let i = 0; i < todo.length; i += BATCH) chunks.push(todo.slice(i, i + BATCH))
+  if (!todo.length) return
   todo.forEach((j) => (j.evaluating = true))
+  paint()
+  let known = 0
+  try {
+    const { results } = await call('evaluate/lookup', 'POST', { jobs: todo.map(slim) })
+    todo.forEach((j, i) => { if (results[i]) { j.ev = results[i]; j.evaluating = false; j.cached = true; known++ } })
+  } catch { /* la mémoire est un bonus : on évalue tout */ }
+  const unknown = todo.filter((j) => !j.ev)
+  const size = batchSize(), chunks = []
+  for (let i = 0; i < unknown.length; i += size) chunks.push(unknown.slice(i, i + size))
+  const s = $('#status')
+  if (s) s.textContent = known ? `${plural(known, 'offre')} déjà évaluée${known > 1 ? 's' : ''} (mémoire), ${unknown.length} à évaluer…` : ''
   paint()
   let done = 0, stop = false
   const worker = async () => {
     while (chunks.length && !stop) {
       const chunk = chunks.shift()
       try {
-        const res = await call('evaluate/batch', 'POST', { jobs: chunk.map((j) => ({ titre: j.titre, entreprise: j.entreprise, lieu: j.lieu, description: (j.description || '').slice(0, 1500) })) })
+        const res = await call('evaluate/batch', 'POST', { jobs: chunk.map(slim) })
         chunk.forEach((j, i) => { j.ev = res.results?.[i] || { error: "Cette offre n'a pas été évaluée, réessayez." } })
       } catch (e) {
         chunk.forEach((j) => (j.ev = { error: e.message }))
         if ([400, 401, 429].includes(e.status)) { stop = true; toast(e.message, 'err') }
       }
       chunk.forEach((j) => (j.evaluating = false)); done += chunk.length
-      const s = $('#status'); if (s) s.textContent = `Évaluation ${Math.min(done, todo.length)}/${todo.length}…`
+      const st = $('#status'); if (st) st.textContent = `Évaluation ${done}/${unknown.length}…`
       paint()
     }
   }
   await Promise.all([worker(), worker()])
   chunks.flat().forEach((j) => (j.evaluating = false))
-  const s = $('#status'); if (s) s.textContent = stop ? 'Évaluations interrompues.' : 'Évaluations terminées.'
+  const st = $('#status'); if (st) st.textContent = stop ? 'Évaluations interrompues.' : known ? `Évaluations terminées (${known} en mémoire, ${unknown.length} nouvelles).` : 'Évaluations terminées.'
   paint()
 }
 
