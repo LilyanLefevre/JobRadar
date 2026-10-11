@@ -1,5 +1,5 @@
 # JobRadar: PocketBase (comptes, CV, routes /jr/*) + interface. amd64 et arm64.
-FROM alpine:3.20
+FROM alpine:3.24
 ARG PB_VERSION=0.40.5
 ARG TARGETARCH
 RUN apk add --no-cache ca-certificates unzip tzdata \
