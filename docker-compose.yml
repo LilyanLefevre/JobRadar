@@ -8,6 +8,9 @@ services:
       WORKER_URL: http://worker:5055
       WORKER_SECRET: ${WORKER_SECRET:?set WORKER_SECRET in .env}
       SIGNUP_ALLOWLIST: ${SIGNUP_ALLOWLIST:-}
+      TZ: ${TZ:-Europe/Paris} # fuseau des alertes quotidiennes
+      ALERTS_CRON: ${ALERTS_CRON:-0 7 * * *}
+      ALERTS_PER_USER: ${ALERTS_PER_USER:-3}
       ADMIN_PUBLIC: ${ADMIN_PUBLIC:-}
     security_opt: ["no-new-privileges:true"]
     read_only: true

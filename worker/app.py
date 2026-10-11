@@ -244,12 +244,13 @@ def search():
     p = _body()
     if not isinstance(p.get("user"), str) or not _s(p.get("query"), 200).strip():
         return jsonify(error="Requête invalide."), 400
-    today = date.today()
-    day, n = _searches.get(p["user"], (today, 0))
-    n = n + 1 if day == today else 1
-    if n > SEARCHES_PER_DAY:
-        return jsonify(error=f"Limite de {SEARCHES_PER_DAY} recherches par jour atteinte."), 429
-    _searches[p["user"]] = (today, n)
+    if not p.get("scheduled"):  # les alertes quotidiennes ont leur propre plafond (nombre d'alertes par utilisateur)
+        today = date.today()
+        day, n = _searches.get(p["user"], (today, 0))
+        n = n + 1 if day == today else 1
+        if n > SEARCHES_PER_DAY:
+            return jsonify(error=f"Limite de {SEARCHES_PER_DAY} recherches par jour atteinte."), 429
+        _searches[p["user"]] = (today, n)
 
     sites = [s for s in p.get("sites") or ["indeed"] if s in SITES] or ["indeed"]
     with _scrape_slots:
@@ -413,7 +414,7 @@ def keys():
         return jsonify(error="Fournisseur inconnu."), 400
     profile_hash = hashlib.sha256((render_profile(d.get("profile")) or _s(d.get("cv"), 20000)).encode()).hexdigest()[:20]
     rev = hashlib.sha256(f"{prov['id']}|{_model_of(prov)}|{PROMPT if mode == 'full' else BATCH_PROMPT}".encode()).hexdigest()[:12]
-    return jsonify(keys=[f"{mode[0]}{rev}{profile_hash}{_job_fp(j)}" for j in jobs])
+    return jsonify(keys=[f"{mode[0]}{rev}{profile_hash}{_job_fp(j)}" for j in jobs], batch=_batch_limit(prov))
 
 
 @app.post("/evaluate")

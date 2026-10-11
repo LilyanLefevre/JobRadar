@@ -3,8 +3,9 @@ import { ic } from './icons.js?v=__V__'
 import * as search from './search.js?v=__V__'
 import * as profileView from './profile.js?v=__V__'
 import * as settings from './settings.js?v=__V__'
+import * as alertsView from './alerts.js?v=__V__'
 
-const routes = { search, profile: profileView, settings }
+const routes = { search, alerts: alertsView, profile: profileView, settings }
 
 async function start() {
   const authed = pb.authStore.isValid && await pb.collection('users').authRefresh().then(() => true, () => false)
@@ -33,6 +34,7 @@ async function enter() {
   } catch (e) { toast(e.message, 'err') }
   chrome()
   route()
+  alertsView.refreshBadge()
 }
 
 // Barre d'application : bouton « Terminer la configuration » tant qu'il manque l'IA ou le CV, et menu de compte.
@@ -86,7 +88,7 @@ window.addEventListener('hashchange', () => {
   if (lastHash.startsWith('#/profile') && !location.hash.startsWith('#/profile') && profileView.isDirty() && !confirm('Des modifications du profil ne sont pas enregistrées. Quitter quand même ?')) {
     location.hash = lastHash; return
   }
-  lastHash = location.hash; route()
+  lastHash = location.hash; route(); alertsView.refreshBadge()
 })
 
 start()

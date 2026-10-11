@@ -2,7 +2,7 @@
 FROM alpine:3.20
 ARG PB_VERSION=0.40.5
 ARG TARGETARCH
-RUN apk add --no-cache ca-certificates unzip \
+RUN apk add --no-cache ca-certificates unzip tzdata \
  && f="pocketbase_${PB_VERSION}_linux_${TARGETARCH}.zip" \
  && base="https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}" \
  && wget -q "$base/$f" "$base/checksums.txt" \
