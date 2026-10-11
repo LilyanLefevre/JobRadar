@@ -1,17 +1,17 @@
 /// <reference path="../pb_data/types.d.ts" />
 // Routes /jr/* : toutes exigent un utilisateur connecté ; le worker n'est joignable que d'ici.
 
-// En-têtes de sécurité, et dashboard/API d'administration injoignables par le tunnel public
+// En-têtes de sécurité, et API d'administration injoignables par le tunnel public
 // (Cloudflare ajoute CF-Connecting-IP ; en direct, via le port local ou un tunnel SSH, tout reste accessible).
 routerUse((e) => {
   const path = e.request.url.path
   const viaTunnel = !!e.request.header.get("CF-Connecting-IP")
   if (viaTunnel && $os.getenv("ADMIN_PUBLIC") !== "1") {
     // Liste blanche : par le tunnel, seule la collection des utilisateurs est joignable (par nom OU par identifiant,
-    // les superusers répondent aussi à leur identifiant pbc_…). Le reste de l'administration est bloqué.
+    // les superusers répondent aussi à leur identifiant pbc_…). Les API d'administration sont bloquées (l'interface statique de /_/ reste servie: PocketBase y affiche la page de succès OAuth).
     const coll = path.startsWith("/api/collections") ? path.split("/")[3] || "" : null
     const adminApi = ["/api/settings", "/api/backups", "/api/logs", "/api/crons"]
-    if (path === "/_" || path.startsWith("/_/") || adminApi.some((p) => path.startsWith(p)) ||
+    if (adminApi.some((p) => path.startsWith(p)) ||
         (coll !== null && coll !== "users" && coll !== "_pb_users_auth_")) {
       return e.json(404, { message: "Not found" })
     }
@@ -25,12 +25,6 @@ routerUse((e) => {
   }
   return e.next()
 })
-
-// Les comptes ne se créent que par OAuth : la création directe via l'API est interdite.
-onRecordCreateRequest((e) => {
-  if (e.hasSuperuserAuth()) return e.next()
-  throw new ForbiddenError("Inscription par OAuth uniquement.")
-}, "users")
 
 // Liste d'invités optionnelle (SIGNUP_ALLOWLIST=a@x.io,b@y.io) : vide = inscription ouverte.
 onRecordAuthWithOAuth2Request((e) => {

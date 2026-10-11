@@ -12,8 +12,8 @@ Application web ouverte à des utilisateurs authentifiés par OAuth, qui manipul
 | Accès au compte d'un autre utilisateur | Règles d'accès PocketBase par utilisateur (lecture, modification et suppression de son seul compte). Testé : 404 sur les comptes tiers. |
 | Vol des clés API en base | Chiffrement Fernet (clé dérivée de `SECRETS_KEY`) ; collection `secrets` sans règle d'API ; jamais renvoyées au navigateur. |
 | Appel direct du worker | Non exposé ; secret partagé (`WORKER_SECRET`) comparé à temps constant. |
-| Création de comptes en masse / contournement d'OAuth | Création directe par l'API refusée ; liste d'invités optionnelle ; limitation de débit. |
-| Brute force de l'administration | Dashboard et API d'administration bloqués via le tunnel public ; limitation de débit sur l'authentification. |
+| Création de comptes en masse / contournement d'OAuth | Règle de création `@request.context = 'oauth2'` (création directe refusée) ; liste d'invités optionnelle ; limitation de débit. Flux OAuth complet testé en navigateur avec un faux fournisseur OIDC. |
+| Brute force de l'administration | Via le tunnel public, liste blanche de collections : la connexion superuser (par nom ou identifiant `pbc_…`), les réglages, sauvegardes et logs sont bloqués ; limitation de débit sur l'authentification. L'interface statique de `/_/` est servie (page de succès OAuth) mais inutilisable sans ces API. |
 | XSS | Tout contenu issu des offres ou de l'IA est échappé ; liens limités à http(s) ; CSP sans script en ligne. |
 | SSRF | Les URL des fournisseurs viennent d'un fichier fixe, jamais de l'utilisateur. |
 | Entrées invalides ou volumineuses | Champs bornés, taille de requête limitée, erreurs génériques sans détail interne. |
