@@ -48,7 +48,7 @@ async function draw(root) {
     $('[data-toggle]', row).onchange = async (e) => { try { await pb.collection('alerts').update(a.id, { active: e.target.checked }); toast(e.target.checked ? 'Alerte activée.' : 'Alerte mise en pause.') } catch (er) { toast(er.message, 'err'); e.target.checked = !e.target.checked } }
     $('[data-run]', row).onclick = async () => { try { await pb.collection('alerts').update(a.id, { queued: true }); toast('Passage lancé : le rapport arrive dans quelques minutes.'); await draw(root) } catch (er) { toast(er.message, 'err') } }
     $('[data-edit]', row).onclick = () => openAlertDialog(a, () => draw(root))
-    $('[data-del]', row).onclick = async () => { if (!confirm(`Supprimer l'alerte « ${a.name || a.query} » et ses rapports ?`)) return; await pb.collection('alerts').delete(a.id); await draw(root); refreshBadge() }
+    $('[data-del]', row).onclick = async () => { if (!confirm(`Supprimer l'alerte « ${a.name || a.query} » et ses rapports ?`)) return; await pb.collection('alerts').delete(a.id); bus.dispatchEvent(new Event('alerts')); await draw(root); refreshBadge() }
   })
   // Rapports consultés : on les marque comme lus.
   const unread = runs.filter((r) => !r.seen)
@@ -110,7 +110,7 @@ export function openAlertDialog(a, onSaved) {
     try {
       if (a.id) await pb.collection('alerts').update(a.id, body)
       else await pb.collection('alerts').create({ ...body, user: pb.authStore.record.id, active: true })
-      closeDialog(); toast(a.id ? 'Alerte modifiée.' : 'Alerte créée : premier passage demain matin, ou lancez-le maintenant depuis Alertes.'); onSaved?.()
+      closeDialog(); bus.dispatchEvent(new Event('alerts')); toast(a.id ? 'Alerte modifiée.' : 'Alerte créée : premier passage demain matin, ou lancez-le maintenant depuis Alertes.'); onSaved?.()
     } catch (err) { toast(err.message || 'Enregistrement impossible.', 'err') }
   }
   return d
