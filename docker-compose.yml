@@ -8,7 +8,7 @@ services:
       WORKER_URL: http://worker:5055
       WORKER_SECRET: ${WORKER_SECRET:?set WORKER_SECRET in .env}
     ports:
-      - "${JOBRADAR_BIND:-127.0.0.1}:8090:8090"
+      - "${JOBRADAR_BIND:-127.0.0.1}:${JOBRADAR_PORT:-8090}:8090"
     volumes:
       - ./pb_data:/pb/pb_data # comptes, CV, clés API chiffrées: à sauvegarder
     depends_on:
@@ -32,6 +32,6 @@ services:
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:?set CLOUDFLARED_TOKEN in .env}
+      TUNNEL_TOKEN: ${CLOUDFLARED_TOKEN:-} # requis avec COMPOSE_PROFILES=tunnel
     depends_on:
       - app
