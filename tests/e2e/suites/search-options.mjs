@@ -58,4 +58,13 @@ await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-recent.png', c
 await p.fill('#q', 'autre'); 
 const [again] = await Promise.all([p.waitForRequest((r) => r.url().endsWith('/jr/search')), p.click('[data-hist]')]);
 ok('clic sur une recherche récente : elle est relancée', again.postDataJSON().query === 'développeur', again.postData());
+// Synchronisation : un second appareil (contexte vierge, même compte) retrouve l'historique et les critères.
+await p.waitForTimeout(1500);
+const p2 = await (await b.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+await p2.addInitScript(([t, m]) => { localStorage.setItem('pocketbase_auth', JSON.stringify({ token: t, record: m })); }, [tok, { id: u.id, email }]);
+await p2.goto(`${BASE}/#/search`); await p2.waitForSelector('#q');
+ok('autre appareil : historique retrouvé', (await p2.locator('[data-hist]').count()) >= 1);
+ok('autre appareil : critères de la dernière recherche repris', (await p2.inputValue('#q')) === 'développeur' && (await p2.locator('.tagc').count()) >= 1);
+await p2.click('#clearHist'); await p2.waitForTimeout(800); await p2.reload(); await p2.waitForSelector('#q');
+ok('« Effacer » vide aussi l\'historique du compte', (await p2.locator('[data-hist]').count()) === 0);
 await b.close();
