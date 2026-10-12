@@ -50,4 +50,12 @@ const [req] = await Promise.all([p.waitForRequest((r) => r.url().endsWith('/jr/s
 const body = req.postDataJSON();
 ok('lieux envoyés (3 dont celui en cours de saisie) et rayon', body.location === 'Lyon, France;Paris;Nantes' && body.radius === 50, JSON.stringify(body));
 await p.waitForSelector('.rowitem');
+// Reprise de la dernière recherche et historique.
+await p.reload(); await p.waitForSelector('.rowitem');
+ok('dernière recherche reprise : champ, résultats et message', (await p.inputValue('#q')) === 'développeur' && (await p.locator('.rowitem').count()) === 12 && /Dernière recherche/.test(await p.innerText('#status')));
+ok('historique : une recherche récente proposée', (await p.locator('[data-hist]').count()) >= 1);
+await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-recent.png', clip: { x: 0, y: 0, width: 1280, height: 520 } });
+await p.fill('#q', 'autre'); 
+const [again] = await Promise.all([p.waitForRequest((r) => r.url().endsWith('/jr/search')), p.click('[data-hist]')]);
+ok('clic sur une recherche récente : elle est relancée', again.postDataJSON().query === 'développeur', again.postData());
 await b.close();

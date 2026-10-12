@@ -371,3 +371,4 @@ nav.tabs a{white-space:nowrap}
 .sugg li{display:flex;gap:8px;align-items:baseline;min-height:44px;padding:0 12px;align-items:center;border-radius:var(--r);cursor:pointer}
 .sugg li span{color:var(--muted);font-size:14px}
 .sugg li:hover,.sugg li[aria-selected=true]{background:var(--blue-weak)}
+.recent{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px}
