@@ -299,6 +299,7 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ├── worker/                   # service Python interne
 │   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation, empreintes, Web Push
 │   └── providers.json        # fournisseurs d'IA et modèles
+├── CHANGELOG.md              # journal des changements
 ├── tests/                    # rendu markdown (md.test.mjs) et suite de bout en bout (e2e/)
 ├── PRODUCT.md · DESIGN.md    # contexte produit et système de design
 └── .github/                  # déploiement continu, Dependabot

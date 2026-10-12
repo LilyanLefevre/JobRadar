@@ -381,6 +381,9 @@ Le score se lit comme une distance sur un panneau : **fort** (70+) plein bleu, t
 ### Signature : ligne de résultat
 Grille pastille (30px), titre sur deux lignes max avec entreprise · lieu, panneau de match à droite. Ligne courante : fond bleu pâle, contour bleu de 2px, pastille jaune. Dans un rapport d'alerte, la ligne est un lien externe et ajoute le verdict sur deux lignes. Entrée en cascade (0.5s, décalage de 45ms par ligne) : seule animation d'ensemble du produit, avec le pop du menu. Mouvement coupé sous `prefers-reduced-motion`.
 
+### Filtres de recherche
+Poste, lieux, ancienneté, bouton et pastilles de sites restent visibles ; le reste est replié derrière « Plus de filtres » (bouton fantôme `sm` avec l'icône de réglages, `aria-expanded`, pastille `tag` du nombre de filtres modifiés). Le panneau (`.opts`) range offres par site, rayon, salaire minimum, pastilles de contrat (`.check`, multi-sélection) et les deux options « Salaire indiqué uniquement » / « Évaluer avec l'IA ». Les lieux sont un champ à pastilles (`.tagin` / `.tagc`, 3 maximum) combiné à une liste de suggestions (`.sugg`, rôle combobox, flèches / Entrée / Échap). Les recherches récentes (`.recent`) sont des boutons secondaires `sm` ; sur téléphone la rangée défile horizontalement. Le salaire repéré s'écrit en vert (`.pay`, jeton `--ok`) sous le lieu, suivi du contrat et du télétravail ; la pertinence estimée sans IA s'affiche avec un « ~ » dans un panneau neutre (`t-none`).
+
 ### Alertes
 Ligne d'alerte en grille interrupteur / texte / outils : nom, détail (poste · lieu · score ≥ n % · sites), ligne d'état (« Passage en cours » avec rotor, « Dernier passage : … · n offres retenues », erreur en rouge, saut en ambre). Outils : « Lancer maintenant » (secondaire `sm` avec horloge), modifier, supprimer (ghost icône). Pendant un passage, la page se rafraîchit toutes les 5 secondes. Les rapports non lus sont marqués lus après 2 secondes.
 
