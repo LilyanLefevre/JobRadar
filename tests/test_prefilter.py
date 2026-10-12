@@ -1,6 +1,6 @@
 import os, sys, unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "worker"))
-from prefilter import salary, contrat, remote, relevance
+from prefilter import salary, contrat, remote, relevance, places
 
 class T(unittest.TestCase):
     def test_salaires(self):
@@ -16,5 +16,7 @@ class T(unittest.TestCase):
         self.assertEqual(contrat({}, "CDI temps plein"), "CDI"); self.assertEqual(remote({}, "poste hybride"), "Hybride"); self.assertEqual(remote({}, "full remote"), "Télétravail complet")
     def test_pertinence(self):
         self.assertGreater(relevance("Développeur React", "TypeScript", "développeur react", ["React", "TypeScript"]), relevance("Cuisinier", "restaurant", "développeur react", ["React"]))
+    def test_lieux(self):
+        self.assertEqual(places("Lyon, France; Paris ;; Nantes; Lille"), ["Lyon, France", "Paris", "Nantes"]); self.assertEqual(places(["A", " "]), ["A"]); self.assertEqual(places(None), [])
 
 unittest.main() if __name__ == "__main__" else None

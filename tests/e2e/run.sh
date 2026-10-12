@@ -34,7 +34,7 @@ FAILS=0
 run() { name=$1; shift; echo "##### $name"; cleanup; "$@" >"$E2E_OUT/$name.txt" 2>&1
   n=$(grep -c '^FAIL' "$E2E_OUT/$name.txt"); k=$(grep -c '^OK' "$E2E_OUT/$name.txt")
   echo "   OK $k / FAIL $n"; grep -E '^FAIL|Timeout|Error' "$E2E_OUT/$name.txt" | head -5
-  [ "$n" -gt 0 ] || [ "$k" -eq 0 ] && FAILS=$((FAILS+1)); }
+  if [ "$n" -gt 0 ] || [ "$k" -eq 0 ] || grep -qE "Timeout|Error:|Traceback" "$E2E_OUT/$name.txt"; then FAILS=$((FAILS+1)); echo "   => EN ÉCHEC"; fi; }
 cd suites
 run backend $PY backend.py
 run batch20 $PY batch20.py

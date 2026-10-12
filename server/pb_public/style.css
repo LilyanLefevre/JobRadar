@@ -58,7 +58,7 @@ textarea{min-height:96px;resize:vertical;line-height:1.5}
 input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:0;border-color:var(--focus)}
 input[type=checkbox]{width:20px;height:20px;min-height:0;accent-color:var(--action)}
 .field{display:flex;flex-direction:column;gap:4px;min-width:0}
-.field>span,.label{font-size:14px;font-weight:600}
+.field>span,.field>label,.label{font-size:14px;font-weight:600}
 
 /* Boutons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:var(--r);border:1.5px solid var(--action);background:var(--action);color:var(--on-action);font:600 16px var(--sans);cursor:pointer;text-decoration:none;white-space:nowrap}
@@ -356,3 +356,13 @@ nav.tabs a{white-space:nowrap}
 @media (pointer:coarse){.brand{min-height:44px;min-width:44px}nav.tabs a{min-height:44px}.btn.sm,.setup{min-height:44px}.btn.icon{width:44px;min-height:44px}.avatar{width:44px;height:44px}.listbar{min-height:44px}}
 .pay{color:var(--ok);font-weight:600}
 .opts{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:end;gap:12px 16px}.opts .sal{width:min(100%,260px)}
+.tagin{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:44px;padding:0 8px;background:var(--panel);border:1.5px solid var(--line-strong);border-radius:var(--r)}
+.tagin:focus-within{outline:3px solid var(--focus);border-color:var(--focus)}
+.tagin input{flex:1;width:auto;min-width:9ch;min-height:44px;padding:0 4px;border:0;background:transparent}
+.tagin input:focus-visible{outline:0}
+.tagc{display:inline-flex;align-items:center;gap:2px;padding-left:12px;border-radius:999px;background:var(--blue-weak);color:var(--ink);font-weight:500}
+.tagc button{border:0;background:none;color:inherit;font:700 18px/1 var(--sans);width:32px;min-height:32px;cursor:pointer;border-radius:999px}
+@media (pointer:coarse){.tagc button{width:44px;min-height:44px}}
+.rowitem b.pay{display:inline}
+.tagc{min-height:32px}
+@media (pointer:coarse){.tagc{min-height:44px}}

@@ -12,7 +12,7 @@ export const state = {
   key: { has_key: false, provider: '' },
   jobs: {},
   selected: null,
-  form: { q: '', loc: '', n: '10', hours: '168', sites: ['indeed', 'hellowork', 'linkedin', 'glassdoor'], smin: '', sreq: false, ai: true },
+  form: { q: '', locs: [], rad: '25', n: '10', hours: '168', sites: ['indeed', 'hellowork', 'linkedin', 'glassdoor'], smin: '', sreq: false, ai: true },
 }
 
 export const profile = () => pb.authStore.record?.profile || null
@@ -75,4 +75,33 @@ export const avatarHtml = (px, cls = '') => {
 // Une image qui ne charge pas (ou une photo supprimée) laisse place aux initiales.
 export function bindAvatars(root = document) {
   root.querySelectorAll('.pic img').forEach((img) => img.addEventListener('error', () => { img.parentElement.textContent = img.parentElement.dataset.ini }, { once: true }))
+}
+
+// Champ « lieux » : jusqu'à 3 pastilles (Entrée ou « ; » valide un lieu), un rayon en km autour de chacun.
+export const RADII = [10, 25, 50, 100]
+export const splitPlaces = (s) => String(s || '').split(';').map((x) => x.trim()).filter(Boolean).slice(0, 3)
+export const placesField = (id) => `<div class="field"><label for="${id}">Lieux (3 maximum)</label><div class="tagin" id="${id}-box"><input id="${id}" autocomplete="off" placeholder="Lyon, France"></div></div>`
+export const radiusField = (id, value) => `<label class="field"><span>Rayon autour du lieu</span><select id="${id}">${RADII.map((r) => `<option value="${r}" ${String(value || 25) === String(r) ? 'selected' : ''}>${r} km</option>`).join('')}</select></label>`
+export function bindPlaces(root, id, initial) {
+  const box = $(`#${id}-box`, root), input = $(`#${id}`, root)
+  let list = [...initial].slice(0, 3)
+  const draw = () => {
+    $$('.tagc', box).forEach((c) => c.remove())
+    list.forEach((p, i) => {
+      const c = document.createElement('span'); c.className = 'tagc'
+      c.append(p)
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = '×'; b.setAttribute('aria-label', `Retirer ${p}`)
+      b.onclick = () => { list.splice(i, 1); draw(); input.focus() }
+      c.append(b); box.insertBefore(c, input)
+    })
+    input.disabled = list.length >= 3; input.placeholder = list.length ? '' : 'Lyon, France'
+  }
+  const commit = () => { const v = input.value.replace(/;/g, ' ').trim(); input.value = ''; if (v && list.length < 3 && !list.includes(v)) { list.push(v); draw() } }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); commit() }
+    else if (e.key === ';') { e.preventDefault(); commit() }
+    else if (e.key === 'Backspace' && !input.value && list.length) { list.pop(); draw() }
+  })
+  draw()
+  return () => { commit(); return [...list] }
 }

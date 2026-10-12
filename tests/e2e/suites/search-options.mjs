@@ -29,4 +29,17 @@ ok('salaire minimum + indiqué uniquement : 1 offre', (await search()) === 1);
 await p.check('#ai'); await p.uncheck('#sreq'); await p.fill('#smin', '');
 await search(); await p.waitForTimeout(1500);
 ok('IA cochée : l\'évaluation a lieu', calls());
+// Plusieurs lieux (pastilles) et rayon : la requête envoie « A;B » et le rayon.
+await p.goto(`${BASE}/#/search`); await p.waitForSelector('#q');
+for (const c of await p.locator('.tagc button').all()) await c.click();
+await p.fill('#loc', 'Lyon, France'); await p.press('#loc', 'Enter');
+await p.fill('#loc', 'Paris'); await p.press('#loc', ';');
+await p.fill('#loc', 'Nantes'); // validé à l'envoi
+await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-form.png' });
+ok('deux lieux validés en pastilles', (await p.locator('.tagc').count()) === 2);
+await p.selectOption('#rad', '50');
+const [req] = await Promise.all([p.waitForRequest((r) => r.url().endsWith('/jr/search')), p.click('#go')]);
+const body = req.postDataJSON();
+ok('lieux envoyés (3 dont celui en cours de saisie) et rayon', body.location === 'Lyon, France;Paris;Nantes' && body.radius === 50, JSON.stringify(body));
+await p.waitForSelector('.rowitem');
 await b.close();
