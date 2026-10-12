@@ -1,5 +1,5 @@
 // Options de recherche : critère de salaire et case « Évaluer avec l'IA » (cochée par défaut).
-import { chromium } from 'playwright';
+import { more } from './_lib.mjs';import { chromium } from 'playwright';
 import { execSync } from 'node:child_process';
 import { existsSync, unlinkSync } from 'node:fs';
 const BASE = process.env.BASE || 'http://localhost:8090';
@@ -21,10 +21,10 @@ const search = async () => { await p.click('#go'); await p.waitForSelector('.row
 await p.goto(`${BASE}/#/search`); await p.waitForSelector('#q'); await p.fill('#q', 'développeur');
 ok('« Évaluer avec l\'IA » cochée par défaut', await p.isChecked('#ai'));
 if (calls()) unlinkSync(LOG);
-await p.uncheck('#ai'); await search();
+await more(p); await p.uncheck('#ai'); await search();
 ok('IA décochée : aucun appel au fournisseur', !calls());
 ok('IA décochée : salaire et pertinence estimée affichés', (await p.locator('.rowitem .pay').count()) >= 1 && /~/.test(await p.locator('.rowitem .match').first().innerText()));
-await p.fill('#smin', '40000'); await p.check('#sreq');
+await more(p); await p.fill('#smin', '40000'); await p.check('#sreq');
 ok('salaire minimum + indiqué uniquement : 1 offre', (await search()) === 1);
 await p.check('#ai'); await p.uncheck('#sreq'); await p.fill('#smin', '');
 await search(); await p.waitForTimeout(1500);
@@ -45,7 +45,7 @@ await p.fill('#loc', 'Paris'); await p.press('#loc', ';');
 await p.fill('#loc', 'Nantes'); // validé à l'envoi
 await p.evaluate(() => scrollTo(0, 0)); await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-form.png' });
 ok('deux lieux validés en pastilles', (await p.locator('.tagc').count()) === 2);
-await p.selectOption('#rad', '50');
+await more(p); await p.selectOption('#rad', '50');
 const [req] = await Promise.all([p.waitForRequest((r) => r.url().endsWith('/jr/search')), p.click('#go')]);
 const body = req.postDataJSON();
 ok('lieux envoyés (3 dont celui en cours de saisie) et rayon', body.location === 'Lyon, France;Paris;Nantes' && body.radius === 50, JSON.stringify(body));
@@ -67,4 +67,20 @@ ok('autre appareil : historique retrouvé', (await p2.locator('[data-hist]').cou
 ok('autre appareil : critères de la dernière recherche repris', (await p2.inputValue('#q')) === 'développeur' && (await p2.locator('.tagc').count()) >= 1);
 await p2.click('#clearHist'); await p2.waitForTimeout(800); await p2.reload(); await p2.waitForSelector('#q');
 ok('« Effacer » vide aussi l\'historique du compte', (await p2.locator('[data-hist]').count()) === 0);
+// Panneau « Plus de filtres » : replié par défaut, contrat, badge du nombre de filtres actifs ; vue téléphone.
+await p.goto(`${BASE}/#/search`); await p.waitForSelector('#q');
+ok('« Plus de filtres » replié par défaut', !(await p.isVisible('#smin')) && (await p.getAttribute('#moreBtn', 'aria-expanded')) === 'false');
+await p.click('#moreBtn'); await p.check('.contrat[value=CDI]');
+const rows = async () => { await p.click('#go'); await p.waitForSelector('.rowitem'); await p.waitForTimeout(1500); return p.locator('.rowitem').count(); };
+ok('filtre CDI : le CDD est écarté', (await rows()) === 11);
+ok('le bouton annonce 1 filtre actif', /1/.test(await p.innerText('#moreBtn')));
+const m = await (await b.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })).newPage();
+await m.addInitScript(([t, r]) => { localStorage.setItem('pocketbase_auth', JSON.stringify({ token: t, record: r })); }, [tok, { id: u.id, email }]);
+await m.goto(`${BASE}/#/search`); await m.waitForSelector('#q'); await m.click('#editSearch').catch(() => {});
+await m.evaluate(() => scrollTo(0, 0)); await m.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-m-closed.png' });
+await m.click('#moreBtn'); await m.evaluate(() => scrollTo(0, 0)); await m.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-m-open.png', fullPage: false });
+ok('mobile : aucun débordement horizontal', await m.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+await m.goto(`${BASE}/#/alerts`); await m.waitForSelector('#newAlert'); await m.click('#newAlert'); await m.waitForSelector('#alertForm');
+await m.screenshot({ path: (process.env.E2E_OUT || '.out') + '/so-m-alert.png' });
+ok('mobile : fenêtre d\'alerte sans débordement horizontal', await m.evaluate(() => { const d = document.querySelector('dialog'); return d.scrollWidth <= d.clientWidth && document.documentElement.scrollWidth <= innerWidth; }));
 await b.close();

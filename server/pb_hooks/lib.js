@@ -143,7 +143,7 @@ module.exports = {
 
     let sites = []
     try { sites = JSON.parse(alert.getString("sites") || "[]") } catch (_) {}
-    const sr = this.worker("/search", { user: userId, scheduled: true, query: alert.getString("query"), location: alert.getString("location"), radius: alert.getInt("radius") || 25, n: 15, hours: alert.getInt("hours") || 48, sites, keywords: this.keywordsOf(user), salary_min: alert.getInt("salary_min"), salary_required: alert.getBool("salary_required") }, 240)
+    const sr = this.worker("/search", { user: userId, scheduled: true, query: alert.getString("query"), location: alert.getString("location"), radius: alert.getInt("radius") || 25, n: 15, hours: alert.getInt("hours") || 48, sites, keywords: this.keywordsOf(user), salary_min: alert.getInt("salary_min"), salary_required: alert.getBool("salary_required"), contracts: alert.getString("contracts") }, 240)
     if (sr.statusCode !== 200) return finish("error", (sr.json && sr.json.error) || "Recherche impossible.", [], 0)
     const jobs = sr.json.jobs || []
 

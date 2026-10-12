@@ -1,5 +1,5 @@
 import { chromium } from 'playwright';
-import { existsSync, unlinkSync, readFileSync } from 'node:fs';
+import { more } from './_lib.mjs';import { existsSync, unlinkSync, readFileSync } from 'node:fs';
 const rmCalls = () => existsSync((process.env.E2E_TMP || '/tmp') + '/fake_calls.log') && unlinkSync((process.env.E2E_TMP || '/tmp') + '/fake_calls.log');
 const calls = () => existsSync((process.env.E2E_TMP || '/tmp') + '/fake_calls.log') ? readFileSync((process.env.E2E_TMP || '/tmp') + '/fake_calls.log', 'utf8').trim().split('\\n').filter(Boolean).length : 0;
 const b = await chromium.launch({ channel: process.env.PW_CHANNEL || 'chrome' });
@@ -29,7 +29,7 @@ await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/s-menu.png' });
 await p.keyboard.press('Escape'); ok('Échap ferme le menu et rend le focus', !(await p.locator('#acctMenu').isVisible()) && await p.evaluate(() => document.activeElement?.id === 'acctBtn'));
 
 // recherche sans IA
-await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await p.fill('#n', '3');
+await p.fill('#q', 'développeur web'); await p.fill('#loc', 'Lyon'); await more(p); await p.fill('#n', '3');
 if (await checked('linkedin')) await chip('LinkedIn').click();
 await p.click('#go'); await p.waitForSelector('#dialog[open]');
 ok('popup de suggestion', (await txt('#dialog')).includes('Activer les scores') && (await txt('#dialog')).includes('Configurer votre IA'));
@@ -76,7 +76,7 @@ ok('persisté : catégorie, poste, compétences, CDD', (await p.inputValue('[dat
 // recherche avec IA : lots, panneaux de match
 await p.click('nav [data-nav=search]'); await p.waitForSelector('#q');
 ok('recherche préremplie depuis le profil', (await p.inputValue('#q')) !== '' && (await p.locator('.tagc').allInnerTexts()).join().includes('Lyon'));
-await p.fill('#n', '3'); if (await checked('linkedin')) await chip('LinkedIn').click();
+await more(p); await p.fill('#n', '3'); if (await checked('linkedin')) await chip('LinkedIn').click();
 await p.click('#go'); await p.waitForSelector('.match.t-strong, .match.t-mid', { timeout: 120000 });
 ok('pas de popup quand tout est configuré', !(await p.locator('#dialog[open]').count()));
 ok('scores en panneaux (90 fort, lot)', (await txt('.rowitem .match')).includes('90') && (await p.locator('.match.t-strong').count()) > 0);

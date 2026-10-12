@@ -76,6 +76,9 @@ CONTRATS = [("CDI", r"\bcdi\b|contrat à durée indéterminée"), ("CDD", r"\bcd
             ("Stage", r"\bstage\b|stagiaire|internship"), ("Freelance", r"freelance|indépendant|portage"), ("Intérim", r"int[ée]rim")]
 
 
+CONTRAT_NOMS = {c for c, _ in CONTRATS}
+
+
 def contrat(row, text):
     for label, pat in CONTRATS:
         if re.search(pat, text, re.I):
@@ -137,3 +140,8 @@ def places(v, limit=3):
     """Lieux de recherche : liste ou texte séparé par « ; » (les virgules font partie d'un lieu : « Lyon, France »)."""
     items = v if isinstance(v, list) else str(v or "").split(";")
     return [str(x).strip()[:100] for x in items if str(x).strip()][:limit]
+
+
+def keep_contract(job, wanted):
+    """Type de contrat : une offre dont le contrat n'est pas indiqué reste ; sinon il doit figurer parmi ceux demandés."""
+    return not wanted or not job.get("contrat") or job["contrat"] in wanted
