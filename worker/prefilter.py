@@ -120,3 +120,14 @@ def enrich(row, query, keywords):
     text = f"{row.get('title', '')}\n{row.get('description', '')}"
     return {"salaire": salary(row, text), "contrat": contrat(row, text), "teletravail": remote(row, text),
             "pre": relevance(row.get("title", ""), row.get("description", ""), query, keywords)}
+
+
+ANNUEL = {"an": 1, "mois": 12, "jour": 218, "heure": 1607}
+
+
+def keep_salary(job, minimum, required):
+    """Critère de salaire (annuel brut) : une offre sans salaire indiqué reste, sauf si « indiqué uniquement »."""
+    s = job.get("salaire")
+    if not s:
+        return not required
+    return not minimum or s["max"] * ANNUEL[s["periode"]] >= minimum
