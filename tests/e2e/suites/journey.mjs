@@ -36,7 +36,7 @@ ok('popup de suggestion', (await txt('#dialog')).includes('Activer les scores') 
 await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/s-nudge.png' });
 await p.click('[data-close=go]'); await p.waitForSelector('.rowitem', { timeout: 120000 });
 ok('offres affichées sans IA', (await p.locator('.rowitem').count()) > 0);
-ok('panneaux "non évalué"', (await txt('.rowitem .match')).includes('–'));
+ok('panneaux "non évalué"', /[–~]/.test(await txt('.rowitem .match')));
 await p.locator('.rowitem').first().click();
 ok('description visible et rendue', await p.locator('#detail .md').isVisible() && !(await p.locator('#detail .md').innerHTML()).includes('**'));
 await p.screenshot({ path: (process.env.E2E_OUT || '.out') + '/s-search-noai.png' });

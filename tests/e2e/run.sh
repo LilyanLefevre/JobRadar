@@ -40,5 +40,6 @@ run backend $PY backend.py
 run batch20 $PY batch20.py
 for s in journey alerts pwa install notifications mobile avatar touch; do run $s node $s.mjs; done
 cd "$ROOT" && echo "##### md" && node --test tests/md.test.mjs >/dev/null 2>&1 || { echo "   FAIL md"; FAILS=$((FAILS+1)); }
+echo "##### prefilter"; $PY tests/test_prefilter.py >/dev/null 2>&1 || { echo "   FAIL prefilter"; FAILS=$((FAILS+1)); }
 echo; [ $FAILS -eq 0 ] && echo "TOUT PASSE" || echo "$FAILS suite(s) en échec (détails : tests/e2e/.out/)"
 exit $FAILS

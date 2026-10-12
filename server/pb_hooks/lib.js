@@ -115,6 +115,13 @@ module.exports = {
   },
 
   // ---- Alertes quotidiennes ----
+  // Mots-clés du profil (compétences, métiers visés) pour la pertinence estimée sans IA.
+  keywordsOf(user) {
+    try {
+      const pr = JSON.parse(user.getString("profile") || "null") || {}
+      return [...(pr.recherche && pr.recherche.metiers || []), ...(pr.competences || []).flatMap((c) => c.items || [])].filter((k) => typeof k === "string").slice(0, 60)
+    } catch (_) { return [] }
+  },
   runAlert(alert) {
     const userId = alert.getString("user")
     const user = $app.findRecordById("users", userId)
@@ -130,17 +137,13 @@ module.exports = {
       $app.save(run)
       alert.set("last_status", status); alert.set("last_message", message || ""); stamp(); alert.set("queued", false); $app.save(alert)
       if (status === "ok" && items.length) {
-        try { this.notify(user, { title: `JobRadar · ${alert.getString("name") || alert.getString("query")}`, body: `${items.length} nouvelle${items.length > 1 ? "s" : ""} offre${items.length > 1 ? "s" : ""} (meilleur match ${items[0].match} %)`, url: "/#/alerts", tag: "alert-" + alert.id }) } catch (_) { /* une notification manquée ne casse pas le rapport */ }
+        try { this.notify(user, { title: `JobRadar · ${alert.getString("name") || alert.getString("query")}`, body: `${items.length} nouvelle${items.length > 1 ? "s" : ""} offre${items.length > 1 ? "s" : ""}${items[0].match != null ? ` (meilleur match ${items[0].match} %)` : ""}`, url: "/#/alerts", tag: "alert-" + alert.id }) } catch (_) { /* une notification manquée ne casse pas le rapport */ }
       }
     }
 
-    if (!this.providersOf(userId).length) return finish("skipped", "IA non configurée : ajoutez votre clé dans les Paramètres.", [], 0)
-    const profile = JSON.parse(user.getString("profile") || "null")
-    if (!profile && !user.getString("cv").trim()) return finish("skipped", "Profil vide : importez votre CV.", [], 0)
-
     let sites = []
     try { sites = JSON.parse(alert.getString("sites") || "[]") } catch (_) {}
-    const sr = this.worker("/search", { user: userId, scheduled: true, query: alert.getString("query"), location: alert.getString("location"), n: 15, hours: alert.getInt("hours") || 48, sites }, 240)
+    const sr = this.worker("/search", { user: userId, scheduled: true, query: alert.getString("query"), location: alert.getString("location"), n: 15, hours: alert.getInt("hours") || 48, sites, keywords: this.keywordsOf(user) }, 240)
     if (sr.statusCode !== 200) return finish("error", (sr.json && sr.json.error) || "Recherche impossible.", [], 0)
     const jobs = sr.json.jobs || []
 
@@ -155,17 +158,22 @@ module.exports = {
     const fresh = jobs.filter((j) => !known[ukey(j)]).slice(0, 60)
     if (!fresh.length) return finish("ok", "Aucune nouvelle offre.", [], jobs.length)
 
-    const ev = this.evaluateLight(user, fresh)
-    if (ev.error) return finish("error", ev.error, [], fresh.length) // rien n'est marqué comme vu : on retentera demain
+    // L'IA est un plus : sans clé, sans profil ou en cas de panne, les nouvelles offres sont quand même transmises (pertinence estimée).
+    const profile = JSON.parse(user.getString("profile") || "null")
+    let ev = null, note = ""
+    if (this.providersOf(userId).length && (profile || user.getString("cv").trim())) {
+      ev = this.evaluateLight(user, fresh)
+      if (ev.error) { note = ` IA indisponible (${ev.error}) : offres non évaluées.`; ev = null }
+    } else note = " Sans IA : offres classées par pertinence estimée."
     const min = alert.getInt("min_score")
     const items = []
     fresh.forEach((j, i) => {
-      const r = ev.results[i]
-      if (r && r.match >= min) items.push({ titre: j.titre, entreprise: j.entreprise, lieu: j.lieu, site: j.site, url: j.url, date: j.date, match: r.match, cv_score: r.cv_score, verdict: r.verdict, forces: r.forces, manques: r.manques })
-      if (r) { try { const rec = new Record($app.findCollectionByNameOrId("alert_seen")); rec.set("alert", alert.id); rec.set("ukey", ukey(j)); $app.save(rec) } catch (_) {} }
+      const r = ev && ev.results[i]
+      if (!r || r.match >= min) items.push({ titre: j.titre, entreprise: j.entreprise, lieu: j.lieu, site: j.site, url: j.url, date: j.date, salaire: j.salaire, contrat: j.contrat, teletravail: j.teletravail, pre: j.pre, match: r ? r.match : null, cv_score: r ? r.cv_score : null, verdict: r ? r.verdict : "", forces: r ? r.forces : [], manques: r ? r.manques : [] })
+      try { const rec = new Record($app.findCollectionByNameOrId("alert_seen")); rec.set("alert", alert.id); rec.set("ukey", ukey(j)); $app.save(rec) } catch (_) {}
     })
-    items.sort((a, b) => b.match - a.match)
-    return finish("ok", `${fresh.length} nouvelle${fresh.length > 1 ? "s" : ""} offre${fresh.length > 1 ? "s" : ""} examinée${fresh.length > 1 ? "s" : ""}.`, items, jobs.length)
+    items.sort((a, b) => (b.match == null ? -1 : b.match) - (a.match == null ? -1 : a.match) || (b.pre || 0) - (a.pre || 0))
+    return finish("ok", `${fresh.length} nouvelle${fresh.length > 1 ? "s" : ""} offre${fresh.length > 1 ? "s" : ""} examinée${fresh.length > 1 ? "s" : ""}.${note}`, items, jobs.length)
   },
   runAllAlerts() {
     for (const a of $app.findRecordsByFilter("alerts", "active = true", "user", 0, 0)) {

@@ -126,7 +126,7 @@ async function evaluateAll(list) {
   const s = $('#status')
   if (s) s.textContent = known ? `${plural(known, 'offre')} déjà évaluée${known > 1 ? 's' : ''} (mémoire), ${unknown.length} à évaluer…` : ''
   paint()
-  let done = 0, stop = false, switchedTo = ''
+  let done = 0, stop = false, switchedTo = '', aiDown = ''
   const worker = async () => {
     while (chunks.length && !stop) {
       const chunk = chunks.shift()
@@ -136,7 +136,7 @@ async function evaluateAll(list) {
         chunk.forEach((j, i) => { j.ev = res.results?.[i] || { error: "Cette offre n'a pas été évaluée, réessayez." } })
       } catch (e) {
         chunk.forEach((j) => (j.ev = { error: e.message }))
-        if ([400, 401, 429, 503].includes(e.status)) { stop = true; toast(e.message, 'err') }
+        if ([400, 401, 429, 503].includes(e.status)) { stop = true; aiDown = e.message }
       }
       chunk.forEach((j) => (j.evaluating = false)); done += chunk.length
       const st = $('#status'); if (st) st.textContent = `Évaluation ${done}/${unknown.length}…`
@@ -145,7 +145,7 @@ async function evaluateAll(list) {
   }
   await Promise.all([worker(), worker()])
   chunks.flat().forEach((j) => (j.evaluating = false))
-  const st = $('#status'); if (st) st.textContent = stop ? 'Évaluations interrompues.' : known ? `Évaluations terminées (${known} en mémoire, ${unknown.length} nouvelles).` : 'Évaluations terminées.'
+  const st = $('#status'); if (st) st.textContent = stop ? `Évaluations interrompues : ${aiDown} Les offres restent classées par pertinence estimée.` : known ? `Évaluations terminées (${known} en mémoire, ${unknown.length} nouvelles).` : 'Évaluations terminées.'
   if (switchedTo && st) st.textContent += ` Fournisseur de secours utilisé : ${providerLabel(switchedTo)}.`
   paint()
 }
@@ -156,17 +156,20 @@ async function evaluateOne(j) {
   j.evaluating = false; paint()
 }
 
+// Salaire, contrat et télétravail repérés par le serveur dans la fiche, sans IA.
+const extras = (j) => { const t = [j.salaire?.texte && `<b class="pay">${esc(j.salaire.texte)}</b>`, j.contrat && esc(j.contrat), j.teletravail && esc(j.teletravail)].filter(Boolean); return t.length ? `<span class="sub">${t.join(' · ')}</span>` : '' }
+
 // Le match se lit comme une distance sur un panneau de direction : plein = proche, contour = moyen, pointillé = loin.
 function matchPanel(j, big = false) {
   const m = j.ev?.match, cls = big ? 'match big' : 'match'
   if (j.evaluating) return `<span class="${cls} t-none" role="img" aria-label="Évaluation en cours">…</span>`
-  if (m == null) return `<span class="${cls} t-none" role="img" aria-label="${j.ev?.error ? 'Évaluation en erreur' : 'Non évaluée'}">${j.ev?.error ? '!' : '–'}</span>`
+  if (m == null) return j.pre != null ? `<span class="${cls} t-none" role="img" aria-label="Pertinence estimée ${j.pre} pour cent" title="Pertinence estimée sans IA">~${j.pre}<small>%</small></span>` : `<span class="${cls} t-none" role="img" aria-label="Non évaluée">–</span>`
   return `<span class="${cls} t-${tier(m)}" role="img" aria-label="Match ${m} pour cent">${m}<small>%</small></span>`
 }
 
 function paint() {
   const list = $('#list'); if (!list) return
-  const jobs = Object.values(state.jobs).sort((a, b) => (b.ev?.match ?? -1) - (a.ev?.match ?? -1))
+  const jobs = Object.values(state.jobs).sort((a, b) => (b.ev?.match ?? b.pre ?? -1) - (a.ev?.match ?? a.pre ?? -1))
   $('.results').classList.toggle('solo', !jobs.length)
   if (!jobs.length) {
     list.innerHTML = running ? '' : `<div class="empty">${ic('radar')}<h2>Aucune recherche pour l'instant</h2><p>Indiquez un poste et un lieu, puis lancez la recherche : les offres apparaissent ici, classées par proximité avec votre profil.</p></div>`
@@ -176,7 +179,7 @@ function paint() {
   list.innerHTML = `<div class="listbar"><span class="muted small">${plural(jobs.length, 'offre')}</span><button class="btn ghost sm" id="mkAlert">${ic('bell')}Créer une alerte</button>${canEvaluate() && todo ? `<button class="btn secondary sm" id="evalAll">${ic('sparkle')}Évaluer les ${todo} restantes</button>` : ''}</div>` +
     jobs.map((j) => `<button class="rowitem" data-id="${esc(j.id)}" aria-current="${j.id === state.selected}">
       <span class="roundel" title="${esc(SITE_NAME[j.site] || j.site)}" aria-hidden="true">${esc(SITE[j.site] || '?')}</span>
-      <span><b>${esc(j.titre)}</b><span class="sub">${esc(j.entreprise)} · ${esc(j.lieu)}</span><span class="sr-only"> Source : ${esc(SITE_NAME[j.site] || j.site)}</span></span>
+      <span><b>${esc(j.titre)}</b><span class="sub">${esc(j.entreprise)} · ${esc(j.lieu)}</span>${extras(j)}<span class="sr-only"> Source : ${esc(SITE_NAME[j.site] || j.site)}</span></span>
       ${matchPanel(j)}</button>`).join('')
   const rows = $$('.rowitem', list)
   if (animate) { animate = false; rows.forEach((b, i) => { b.style.setProperty('--i', Math.min(i, 10)); b.classList.add('enter') }) }
@@ -193,7 +196,7 @@ function detail(j) {
   const todo = setupTodo()
   let body = ''
   if (j.evaluating) body = `<p class="muted mt"><span class="spin" aria-hidden="true"></span> Évaluation en cours…</p>`
-  else if (e?.error) body = `<div class="banner err mt" role="alert">${ic('alert')}<div><b>Évaluation impossible</b>${esc(e.error)}</div></div>${canEvaluate() ? `<div class="mt"><button class="btn secondary" id="evalOne">Réessayer</button></div>` : ''}`
+  else if (e?.error) body = `<div class="banner warn mt" role="status">${ic('alert')}<div><b>Évaluation indisponible</b>${esc(e.error)}</div></div>${canEvaluate() ? `<div class="mt"><button class="btn secondary" id="evalOne">Réessayer</button></div>` : ''}`
   else if (e) body = `
     <div class="dists">
       <div class="dist">${matchPanel(j, true)}Match profil / offre</div>
@@ -210,7 +213,7 @@ function detail(j) {
   el.innerHTML = `<article class="sheet">
     <div class="detailbar"><button class="btn ghost sm" id="back">${ic('left')}Résultats</button><a class="btn sm" href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre${ic('external')}</a></div>
     <h2>${esc(j.titre)}</h2>
-    <div class="meta"><span>${esc(j.entreprise)}</span><span>${ic('pin')}${esc(j.lieu)}</span><span>${esc(SITE_NAME[j.site] || j.site)}</span><a href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre${ic('external')}</a></div>
+    <div class="meta"><span>${esc(j.entreprise)}</span><span>${ic('pin')}${esc(j.lieu)}</span><span>${esc(SITE_NAME[j.site] || j.site)}</span>${j.salaire ? `<span class="pay">${esc(j.salaire.texte)}</span>` : ''}${j.contrat ? `<span>${esc(j.contrat)}</span>` : ''}${j.teletravail ? `<span>${esc(j.teletravail)}</span>` : ''}<a href="${esc(url)}" target="_blank" rel="noopener">Voir l'offre${ic('external')}</a></div>
     ${body}
     <div class="block"><h3>Description de l'offre</h3><div class="md mt">${j.description ? renderMarkdown(j.description) : '<p class="muted">Aucune description fournie par le site.</p>'}</div></div></article>`
   $('#evalOne')?.addEventListener('click', () => evaluateOne(j))
