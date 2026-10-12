@@ -330,10 +330,11 @@ def search():
     p = _body()
     if not isinstance(p.get("user"), str) or not _s(p.get("query"), 200).strip():
         return jsonify(error="Requête invalide."), 400
+    places = prefilter.places(p.get("location"))
     if not p.get("scheduled"):  # les alertes quotidiennes ont leur propre plafond (nombre d'alertes par utilisateur)
         today = date.today()
         day, n = _searches.get(p["user"], (today, 0))
-        n = n + 1 if day == today else 1
+        n = (n if day == today else 0) + max(1, len(places))  # une recherche coûte un scrape par lieu
         if n > SEARCHES_PER_DAY:
             return jsonify(error=f"Limite de {SEARCHES_PER_DAY} recherches par jour atteinte."), 429
         _searches[p["user"]] = (today, n)
@@ -345,7 +346,6 @@ def search():
         jobs = [{**j, **prefilter.enrich({"title": j["titre"], "description": j["description"]}, p["query"], kw)} for j in json.load(open(JOBS_FIXTURE))]
         return jsonify(jobs=[j for j in jobs if prefilter.keep_salary(j, smin, sreq) and prefilter.keep_contract(j, wanted)])
     sites = [s for s in p.get("sites") or ["indeed"] if s in SITES] or ["indeed"]
-    places = prefilter.places(p.get("location"))
     miles = max(1, round(_int(p.get("radius"), 25, 0, 200) / 1.609)) if places else 50  # JobSpy compte en miles
     frames = []
     for place in places or ["France"]:

@@ -1,7 +1,7 @@
 # Journal des changements
 
 ## 1.1.0 (2026-10-12)
-- **Sécurité** : regex de salaire protégées contre le backtracking (texte d'offre normalisé et borné à 6 000 caractères) ; `/jr/search` ignore le champ `scheduled` envoyé par le client, qui contournait le plafond de recherches par jour.
+- **Sécurité** : regex de salaire protégées contre le backtracking (texte d'offre normalisé et borné à 6 000 caractères) ; `/jr/search` ignore le champ `scheduled` envoyé par le client, qui contournait le plafond de recherches par jour ; une recherche à plusieurs lieux compte pour un scrape par lieu dans ce plafond ; suggestions de lieux limitées à 30 par minute (migration `9_z_places_rate_limit`) ; historique relu avec clés et types vérifiés ; `pandas` listé dans les dépendances du worker.
 - **Mobile** : détail d'offre sans débordement horizontal à 320 px, menu du compte borné à l'écran.
 - **Prétraitement sans IA** : salaire (champs du site ou formules courantes), contrat, télétravail et pertinence estimée, calculés par le worker (`worker/prefilter.py`).
 - **Alertes sans IA** : sans clé, sans CV, quota épuisé ou panne, le passage réussit et transmet toutes les nouvelles offres, classées par pertinence estimée. Plus de pop-up d'erreur d'IA dans la recherche.
