@@ -8,13 +8,13 @@ export E2E_TMP=$E2E/.work E2E_OUT=$E2E/.out BASE=http://localhost:8090
 PY=${PY:-python3}; PB=${PB_BIN:-pocketbase}
 ADMIN=admin@test.local PASS=adminpass123
 export WORKER_SECRET=testsecret SECRETS_KEY=testkey PROVIDERS_FILE=$E2E/fakes/providers.json SEARCHES_PER_DAY=5000 \
-  PUSH_ALLOWED_HOSTS=127.0.0.1 JOBS_FIXTURE=$E2E/fixtures/jobs.json
+  PUSH_ALLOWED_HOSTS=127.0.0.1 GEO_API=http://127.0.0.1:9998 JOBS_FIXTURE=$E2E/fixtures/jobs.json
 rm -rf "$E2E_TMP"; mkdir -p "$E2E_TMP" "$E2E_OUT"
 [ -d node_modules ] || npm install --silent
 PIDS=()
 stop() { kill "${PIDS[@]}" 2>/dev/null; }; trap stop EXIT
-for port in 5055 8090 9100 9997 9999; do kill $(lsof -ti :$port) 2>/dev/null; done; sleep 1
-for f in llm push oidc; do $PY fakes/$f.py & PIDS+=($!); done
+for port in 5055 8090 9100 9997 9998 9999; do kill $(lsof -ti :$port) 2>/dev/null; done; sleep 1
+for f in llm push oidc geo; do $PY fakes/$f.py & PIDS+=($!); done
 (cd "$ROOT/worker" && $PY -m flask --app app run -p 5055 >"$E2E_TMP/worker.log" 2>&1) & PIDS+=($!)
 # copie de l'app avec la version fictive (comme le Dockerfile)
 APP=$E2E_TMP/app; mkdir -p "$APP"; cp -r "$ROOT/server/pb_public" "$ROOT/server/pb_hooks" "$ROOT/server/pb_migrations" "$APP/"

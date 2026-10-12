@@ -221,6 +221,33 @@ def check_secret():
         return jsonify(error="forbidden"), 403
 
 
+GEO_API = os.environ.get("GEO_API", "https://geo.api.gouv.fr")  # annuaire officiel des communes (sans clé)
+_geo_cache = {}
+
+
+@app.post("/places")
+def places():
+    """Suggestions de lieux (communes françaises) pour le champ de recherche."""
+    q = _s(_body().get("q"), 60).strip()
+    if len(q) < 2:
+        return jsonify(places=[])
+    if q.lower() not in _geo_cache:
+        param = {"codePostal": q} if q.isdigit() and len(q) == 5 else {"nom": q}
+        try:
+            r = requests.get(GEO_API + "/communes", params={**param, "fields": "nom,departement,codesPostaux", "boost": "population", "limit": 6}, timeout=5)
+            r.raise_for_status()
+            found = []
+            for c in r.json():
+                dep = (c.get("departement") or {}).get("nom", "")
+                found.append({"label": c["nom"], "detail": f"{dep} ({c['departement']['code']})" if dep else "", "value": c["nom"] if dep in ("", c["nom"]) else f"{c['nom']}, {dep}"})
+        except (requests.RequestException, ValueError, KeyError):
+            return jsonify(places=[])  # suggestion facultative : jamais d'erreur visible
+        if len(_geo_cache) > 2000:
+            _geo_cache.clear()
+        _geo_cache[q.lower()] = found
+    return jsonify(places=_geo_cache[q.lower()])
+
+
 @app.get("/providers")
 def providers():
     return jsonify(providers=[{k: v for k, v in p.items() if k not in ("base_url", "model", "kind")} for p in PROVIDERS.values()], batch=_batch_limit())
