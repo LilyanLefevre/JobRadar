@@ -248,9 +248,9 @@ WORKER_URL=http://127.0.0.1:5055 WORKER_SECRET=dev \
   --migrationsDir=pb_migrations --hooksDir=pb_hooks --publicDir=pb_public
 ```
 
-Tests : `node --test tests/md.test.mjs` vérifie le rendu des descriptions (titres, listes, jamais de HTML actif). C'est le seul test automatisé versionné. Les parcours de bout en bout (bascule entre fournisseurs, mémoire, alertes, notifications, installation, mobile) ont été vérifiés avec des scripts Playwright et des faux services locaux (fournisseur d'IA, OIDC, service de push) qui ne sont pas dans ce dépôt.
+Tests : `node --test tests/md.test.mjs` vérifie le rendu des descriptions. La suite de bout en bout est dans `tests/e2e/` : `tests/e2e/run.sh` démarre un faux fournisseur d'IA, un faux service de push, un faux OIDC, le worker (offres fixes via `JOBS_FIXTURE`) et un PocketBase vierge, puis enchaîne les parcours (fournisseurs, mémoire, alertes, notifications, PWA, mobile, cibles tactiles). Prérequis : binaire `pocketbase`, Python (dépendances du worker), Node 20+, Chrome (`PW_CHANNEL=chromium` sinon). Variables : `PY`, `PB_BIN`.
 
-Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local. Pour tester les notifications, `PUSH_ALLOWED_HOSTS=127.0.0.1` (variable du worker, **jamais en production**) autorise un faux service de push local.
+Pour tester sans clé réelle, `PROVIDERS_FILE` permet de pointer le worker vers un faux fournisseur local compatible OpenAI. Pour tester la connexion sans GitHub ni Google, PocketBase accepte un fournisseur OIDC générique (*users > Options > OAuth2 > oidc*) que l'on peut pointer vers un petit faux serveur local. Pour tester les notifications, `PUSH_ALLOWED_HOSTS=127.0.0.1` (variable du worker, **jamais en production**) autorise un faux service de push local, et `JOBS_FIXTURE` (idem, tests uniquement) sert des offres fixes au lieu du scraping.
 
 ## Sécurité et données
 
@@ -297,7 +297,7 @@ Résumé ci-dessous ; détails et risques résiduels dans [SECURITY.md](SECURITY
 ├── worker/                   # service Python interne
 │   ├── app.py                # recherche, chiffrement des clés, import du CV, évaluation, empreintes, Web Push
 │   └── providers.json        # fournisseurs d'IA et modèles
-├── tests/                    # tests du rendu markdown des descriptions
+├── tests/                    # rendu markdown (md.test.mjs) et suite de bout en bout (e2e/)
 ├── PRODUCT.md · DESIGN.md    # contexte produit et système de design
 └── .github/                  # déploiement continu, Dependabot
 ```

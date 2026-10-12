@@ -408,11 +408,8 @@ Sommaire collant (`toc`) de liens en Barlow Semi Condensed 16px, survol bleu pâ
 - **Don't** charger de police ou de bibliothèque externe.
 - **Don't** ajouter d'animation d'ensemble autre que la cascade des résultats et le pop du menu (les retours d'état, interrupteur .15s, rotor et squelette, restent locaux).
 
-## Écarts connus (non réparés)
+## Écarts connus
 
-Relevés dans le code livré, à ne pas reprendre comme règles :
-- **Valeurs en dur contre jetons** : la pastille source (`.roundel`) fixe `#fff` et `#0B4F9C` au lieu de `--panel` / `--blue`, donc elle reste blanche en sombre ; le toast fixe `#14181F` / `#fff` ; la pastille de l'interrupteur, la case cochée du profil et le voile de l'avatar sont en blanc codé ; l'ombre de la barre d'enregistrement n'est pas un jeton.
-- **Cibles sous 44px** : boutons `sm` et `icon` (36px), bouton de configuration (36px), bouton d'avatar (40px) ; tolérés pour des actions secondaires, mais l'avatar est une commande principale.
-- **Doubles déclarations** : `.menu` (288px puis 340px), `.savebar` (marges redéfinies avec `!important`), `.drop` (200px puis 240px) ; la dernière valeur gagne et c'est celle documentée.
-- **Décalage de 4px** : `.detailbar` colle à `top: 56px`, hauteur de la barre compacte ; entre 721 et 1000px la barre mesure 60px, la barre de détail passe donc 4px sous elle.
+- **Cibles tactiles** : les boutons `sm` / `icon`, le bouton de configuration, l'avatar, la marque et les onglets font 44px sur écran tactile (`pointer: coarse`) ; ils restent compacts (36–40px) à la souris. La suite `tests/e2e` vérifie ce seuil.
+- **Décalage de barre** : `--bar-h` (60px, 56px sous 720px) pilote la hauteur de la barre et tous les décalages collants ou de défilement.
 - **Seuils de score** (70 / 45) vérifiés dans `lib.js` (fonction `tier`), pas dans la feuille de style.

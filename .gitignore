@@ -10,3 +10,6 @@ CLAUDE.md
 .impeccable/decision-payload.json
 .impeccable/mocks/
 .impeccable/build/
+tests/e2e/.work/
+tests/e2e/.out/
+tests/e2e/node_modules/

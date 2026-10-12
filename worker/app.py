@@ -30,6 +30,7 @@ WORKER_SECRET = os.environ["WORKER_SECRET"]
 FERNET = Fernet(base64.urlsafe_b64encode(hashlib.sha256(os.environ["SECRETS_KEY"].encode()).digest()))
 PROVIDERS = {p["id"]: p for p in json.load(open(os.environ.get("PROVIDERS_FILE") or os.path.join(os.path.dirname(__file__), "providers.json")))}
 SEARCHES_PER_DAY = int(os.environ.get("SEARCHES_PER_DAY", "10"))
+JOBS_FIXTURE = os.environ.get("JOBS_FIXTURE", "")  # tests uniquement : fichier JSON d'offres servi à la place du scraping
 SITES = {"indeed", "hellowork", "linkedin", "glassdoor"}
 
 # ponytail: compteurs en mémoire (remis à zéro au redémarrage), une base si plusieurs workers.
@@ -308,6 +309,8 @@ def search():
             return jsonify(error=f"Limite de {SEARCHES_PER_DAY} recherches par jour atteinte."), 429
         _searches[p["user"]] = (today, n)
 
+    if JOBS_FIXTURE:  # tests uniquement : offres fixes au lieu du scraping
+        return jsonify(jobs=json.load(open(JOBS_FIXTURE)))
     sites = [s for s in p.get("sites") or ["indeed"] if s in SITES] or ["indeed"]
     with _scrape_slots:
         df = scrape_jobs(
